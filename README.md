@@ -14,7 +14,7 @@ To run the demo code for simulated microtubule structure:
 The usage of the demo code for experimental data is similar to the instruction above. Please see the included script, NCSdemo_experiment.m, for detail. 
 
 ## License and Citation
-NCS is released under the [GNU license](https://github.com/HuanglabPurdue/Sheng/edit/master/LICENSE).
+NCS is released under the [GNU license](https://github.com/HuanglabPurdue/NCS/edit/master/LICENSE).
 
 Please cite NCS in your publications if it helps your research:
 
