@@ -15,3 +15,14 @@ The usage of the demo code for experimental data is similar to the instruction a
 
 ## License and Citation
 NCS is released under the [GNU license](https://github.com/HuanglabPurdue/NCS/edit/master/LICENSE).
+
+Please cite NCS in your publications if it helps your research:
+
+   @article{Liu2017NCS,
+     Author = {Liu, Sheng and Mlodzianoski1, Michael J. and Hu, Zhenhua and Ren, Yuan and McElmurry, Kristi and Suter, Daniel M. and Huang, Fang},
+     Journal = {Nature Methods},
+     Title = {sCMOS noise-correction algorithm for microscopy images},
+     Year = {2017}
+     volume = {14}
+     number = {8}
+   }
