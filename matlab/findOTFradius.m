@@ -1,4 +1,5 @@
 % FINDOTFRADIUS  Find the OTF radius from the experimental data. 
+% reference: Liu, Sheng, et al., sCMOS noise-correction algorithm for microscopy images, Nature methods(2017)
 %
 % SYNOPSIS:
 %   [freqmax,otf,ind] = findOTFradius(ims,Pixelsize)

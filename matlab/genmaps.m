@@ -2,6 +2,7 @@
 %           the pixel. This is used for the situation when the sCMOS camera
 %           has multiple gain amplifiers, which will result in multiple
 %           gain and variance maps based on the pixels' ADU level
+% reference: Liu, Sheng, et al., sCMOS noise-correction algorithm for microscopy images, Nature methods(2017)
 %
 % SYNOPSIS:
 %   [gainstack,varstack] = genmaps(ims,gain,var,lightlevel)

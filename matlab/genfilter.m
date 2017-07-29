@@ -1,4 +1,5 @@
 % GENFILTER   Generate OTF mask based on raised cosine filter
+% reference: Liu, Sheng, et al., sCMOS noise-correction algorithm for microscopy images, Nature methods(2017)
 %
 % SYNOPSIS:
 %   Default: 

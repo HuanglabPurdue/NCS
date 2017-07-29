@@ -1,5 +1,6 @@
 % REDUCENOISE   perform noise correction algorithm on gain and offset corrected sCMOS images
-% 
+% reference: Liu, Sheng, et al., sCMOS noise-correction algorithm for microscopy images, Nature methods(2017)
+%
 % SYNOPSIS:
 %   Default:
 %       [outL] = reducenoise(Rs,imsd,varmap,gainmap,imgsz,Pixelsize,NA,Lambda,alpha,iterationN)

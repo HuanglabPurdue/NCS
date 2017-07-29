@@ -1,9 +1,10 @@
 %------ Demo code for noise correction algorithm for sCMOS camera (NCS algorithm) on simulated data------------
+% reference: Liu, Sheng, et al., sCMOS noise-correction algorithm for microscopy images, Nature methods(2017)
 % software requirement: Matlab R2015a or later
 %                       Dipimage toolbox 2.7 or later
 % system requirement:   CPU Intel Core i7 
 %                       32 GB RAM 
-%
+% 
 % (C) Copyright 2017                The Huang Lab
 %     All rights reserved           Weldon School of Biomedical Engineering
 %                                   Purdue University
