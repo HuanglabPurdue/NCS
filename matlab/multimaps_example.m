@@ -1,5 +1,5 @@
 %----- Example code for using multiple gain and variance maps -----
-% reference: Liu, Sheng, et al., sCMOS noise-correction algorithm for microscopy images, Nature methods(2017)
+% reference: Liu,Sheng,et al.,sCMOS noise-correction algorithm for microscopy images,Nature Methods 14,760-761(2017)
 %
 % (C) Copyright 2017                The Huang Lab
 %     All rights reserved           Weldon School of Biomedical Engineering

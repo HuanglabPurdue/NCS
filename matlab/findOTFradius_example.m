@@ -1,5 +1,5 @@
 %----- Example code for determining the OTF radius from the experimental data---
-% reference: Liu, Sheng, et al., sCMOS noise-correction algorithm for microscopy images, Nature methods(2017)
+% reference: Liu,Sheng,et al.,sCMOS noise-correction algorithm for microscopy images,Nature Methods 14,760-761(2017)
 %
 % Data format: data must be .mat file, containing a R by R by N matrix, R
 %              is the x and y dimension of the image, N is the number of

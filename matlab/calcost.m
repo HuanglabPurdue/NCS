@@ -1,5 +1,5 @@
 % CALCOST   Calculate cost function in noise correction algorithm
-% reference: Liu, Sheng, et al., sCMOS noise-correction algorithm for microscopy images, Nature methods(2017)
+% reference: Liu,Sheng,et al.,sCMOS noise-correction algorithm for microscopy images,Nature Methods 14,760-761(2017)
 %
 % SYNOPSIS:
 %   [fcost,noisepart,likelihood]=calcost(u,data,var,gain,otfmask,alpha)

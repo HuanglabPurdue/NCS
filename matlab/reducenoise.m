@@ -1,5 +1,5 @@
 % REDUCENOISE   perform noise correction algorithm on gain and offset corrected sCMOS images
-% reference: Liu, Sheng, et al., sCMOS noise-correction algorithm for microscopy images, Nature methods(2017)
+% reference: Liu,Sheng,et al.,sCMOS noise-correction algorithm for microscopy images,Nature Methods 14,760-761(2017)
 %
 % SYNOPSIS:
 %   Default:
