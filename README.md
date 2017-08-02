@@ -1,6 +1,14 @@
 # NCS
 
-NCS is a Noise Correction Algorithm for sCMOS cameras. The demo package consists of functions and scripts written in MATLAB (MathWorks, Natick, MA). The code has been tested in MATLAB version R2015a. To simplify coding, we use [DIPimage toolbox](http://www.diplib.org/). 
+NCS is a Noise Correction Algorithm for sCMOS cameras. 
+
+# Abstract
+Scientific CMOS (sCMOS) cameras are quickly gaining popularity in life sciences, material science and astronomy because its advantages in a much faster frame rate, larger field of view and higher detection efficiency than traditional cameras such as CCD and EMCCD. However, they introduce pixel-dependent noise that generates image artifacts and biases in quantification. 
+
+NCS (noise correction algorithm for sCMOS (CMOS) cameras) is an algorithm that minimizes sCMOS noise from microscopy images with arbitrary structures. In the citation linked below, we show our new method enables significantly reduction of the pixel-dependent noises in fluorescence microscopy using a sCMOS camera and makes its performance approaching that of an ideal camera. 
+
+# NCS source code demo
+The demo package consists of functions and scripts written in MATLAB (MathWorks, Natick, MA). The code has been tested in MATLAB version R2015a. To simplify coding, we use [DIPimage toolbox](freely available at http://www.diplib.org/). 
 
 ## How to run
 To run the demo code for simulated microtubule structure:
