@@ -80,7 +80,7 @@ if ndims(gainmap) == 3
     if size(varmap,3) ~= size(imsd,3)
         error('NCS:incorrectsize','The size of the variance stack must be equal to the size of the input image.')
     end
-    parfor ii = 1:N
+    for ii = 1:N
         disp(ii)
         [varseg] = segpadimg(varmap(:,:,ii),Rs);
         [gainseg] = segpadimg(gainmap(:,:,ii),Rs);
