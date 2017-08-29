@@ -1,8 +1,17 @@
 
 """
-Created on Sun Aug 27 17:20:35 2017
+------ Demo code for noise correction algorithm for sCMOS camera (NCS algorithm) on simulated data------------
+ reference: Liu,Sheng,et al.,sCMOS noise-correction algorithm for microscopy images,Nature Methods 14,760-761(2017)
+ software requirement: Python 3.6
+(C) Copyright 2017                The Huang Lab
+    All rights reserved           Weldon School of Biomedical Engineering
+                                  Purdue University
+                                  West Lafayette, Indiana
+                                  USA
+ 
 
-@author: shengliu
+@author: Sheng Liu and David A. Miller, August 2017
+
 """
 
 import numpy as np
@@ -13,8 +22,7 @@ import pyNCS.denoisetools as ncs
 
 if __name__ == "__main__":
          
-# load coordinates of microtubules 
-
+    # create normalized ideal image
     fpath1 = r'randwlcposition.mat'
     imgsz = 128
     zoom = 8
@@ -28,24 +36,26 @@ if __name__ == "__main__":
     imso = res[0]
     plt.imshow(imso,cmap=plt.cm.gray)
     
-
-    fpath = r'gaincalibration_561_gain.mat'    
+    # select variance map from calibrated map data
+    fpath = r'gaincalibration_561_gain.mat'        
+    noisemap = ncs.gennoisemap(imgsz,fpath)
+    varsub = noisemap[0]*10 # increase the readout noise by 10 to demonstrate the effect of NCS algorithm
+    gainsub = noisemap[1]
+    
+    # generate simulated data
     I = 100
     bg = 10
     offset = 100
     N = 1
-    noisemap = ncs.gennoisemap(imgsz,fpath)
-    varsub = noisemap[0]*10
-    gainsub = noisemap[1]
     dataimg = ncs.gendatastack(imso,varsub,gainsub,I,bg,offset,N)
     imsd = dataimg[1]
 
+    # generate noise corrected image
     NA = 1.4
     Lambda = 0.7
     Rs = 8
     iterationN = 15
-    alpha = 0.1
-    
+    alpha = 0.1    
     out = ncs.reducenoise(Rs,imsd[0:1],varsub,gainsub,imgsz,Pixelsize,NA,Lambda,alpha,iterationN)
 
     f,(ax1,ax2) = plt.subplots(1,2,sharey=False)

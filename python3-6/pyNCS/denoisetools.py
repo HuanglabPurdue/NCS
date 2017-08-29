@@ -1,9 +1,16 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
 """
-Created on Wed Jun 28 21:15:56 2017
+------ NCS function package (pyNCS) for noise correction algorithm for sCMOS camera (NCS algorithm)------------
+ reference: Liu,Sheng,et al.,sCMOS noise-correction algorithm for microscopy images,Nature Methods 14,760-761(2017)
+ software requirement: Python 3.6
+(C) Copyright 2017                The Huang Lab
+    All rights reserved           Weldon School of Biomedical Engineering
+                                  Purdue University
+                                  West Lafayette, Indiana
+                                  USA
+ 
 
-@author: shengliu
+@author: Sheng Liu and David A. Miller, August 2017
+
 """
 
 import numpy as np
@@ -15,7 +22,7 @@ import scipy.optimize as optimize
 import scipy.fftpack as ft
 import time
 import multiprocessing as mp
-#import pyfftw as pft
+
 
 def segpadimg(img,R1):
     R = img.shape[0]
