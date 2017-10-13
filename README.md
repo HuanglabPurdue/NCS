@@ -9,7 +9,7 @@ NCS (noise correction algorithm for sCMOS (CMOS) cameras) is an algorithm that m
 
 # NCS source code demo
 ## For MATLAB
-The demo package consists of functions and scripts written in MATLAB (MathWorks, Natick, MA). The code has been tested in MATLAB version R2015a. To simplify coding, we use [DIPimage toolbox](freely available at http://www.diplib.org/), see [here](https://github.com/HuanglabPurdue/NCS/edit/master/Dipimage%20Installation.md) for DIPimage installation. 
+The demo package consists of functions and scripts written in MATLAB (MathWorks, Natick, MA). The code has been tested in MATLAB version R2015a. To simplify coding, we use [DIPimage toolbox](freely available at http://www.diplib.org/), see [here](https://github.com/HuanglabPurdue/NCS/blob/master/Dipimage%20Installation.md) for DIPimage installation. 
 
 To run the demo code for simulated microtubule structure:
 
