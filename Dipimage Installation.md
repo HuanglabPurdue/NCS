@@ -1,5 +1,5 @@
 # Installation of dipimage on Windows System
-  1.	Download dipimage from http://www.diplib.org/download. Choose automatic installation package. 
+  1.	Download dipimage from [DIPimage](http://www.diplib.org/download). Choose automatic installation package. 
   2.	After installation, create a Matlab script called startup.m file under the folder C:\Users\XXX\Documents\MATLAB\, copy the following lines in the startup.m file and save the file:
   
       addpath('C:\Program Files\DIPimage 2.8(your dipimage version)\common\dipimage');
