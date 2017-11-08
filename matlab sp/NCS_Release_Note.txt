@@ -1,0 +1,30 @@
+NCS Algorithm Release Notes
+---------------------------
+
+
+Major changes
+---------------------------
+1. Normalize the cost function 
+2. Alpha value is only dependent on pixel size, at Nyquist sampling frequence, recommended alpha value is 1
+3. The segmentation size is 1
+
+
+Detailed changes:
+----------------------------
+1. In genidealimage.m: change line 57 to normimg = imgbin;
+
+2. Add genidealimage_bead.m file
+
+3. In calcost.m: change line 42 to fcost = 2.*likelihood./numel(u) + alpha*noisepart;
+		 change line 53 to noisepart = sum(Fimg(:).^2)./sum(u(:)); 
+
+4. In genfilter.m: change line 31 to [X,Y] = meshgrid(-(imgsz-1)/2:(imgsz-1)/2,-(imgsz-1)/2:(imgsz-1)/2); 
+
+5. Add NCSdemo_simultion_bead.m
+
+
+Copyright
+
+(c) 2017 Huang Lab Purdue. All rights reseved.
+
+----------------------------------------------
