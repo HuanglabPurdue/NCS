@@ -14,6 +14,77 @@
 #include "ncs.h"
 
 
+/* 
+ * ncsCalcLogLikelihood()
+ * 
+ * Calculate the current log-likelihood given u, data and gamma.
+ *
+ * ncs_sr - Pointer to a ncsSubRegion structure.
+ */
+double ncsCalcLogLikelihood(ncsSubRegion *ncs_sr)
+{
+  int i,size;
+  double sum,t1,t2;
+
+  size = ncs_sr->r_size;
+  sum = 0.0;
+  for(i=0;i<(size*size);i++){
+    t1 = ncs_sr->data[i] + ncs_sr->gamma[i];
+    t2 = log(ncs_sr->u[i] + ncs_sr->gamma[i]);
+    sum += ncs_sr->u[i] - t1*t2;
+  }
+  
+  return sum;
+}
+
+
+/* 
+ * ncsCalcNoiseContribution()
+ * 
+ * Calculate the current noise contribution.
+ *
+ * ncs_sr - Pointer to a ncsSubRegion structure.
+ */
+double ncsCalcNoiseContribution(ncsSubRegion *ncs_sr)
+{
+  int i,j,k,l,size,fft_size;
+  double sum,t1,t2;
+
+  size = ncs_sr->r_size;
+  fft_size = ncs_sr->fft_size;
+
+  /* Compute FFT of the current estimate. */
+  fftw_execute(ncs_sr->fft_forward);
+
+  /* Normalize FFT. */
+  for(i=0;i<(size*fft_size);i++){
+    ncs_sr->u_fft[i][0] = ncs_sr->u_fft[i][0]*ncs_sr->normalization;
+    ncs_sr->u_fft[i][1] = ncs_sr->u_fft[i][1]*ncs_sr->normalization;
+  }
+  
+  sum = 0.0;
+  for(i=0;i<size;i++){
+    for(j=0;j<size;j++){
+      k = i*size+j;
+
+      /* FFT is shorter on the second dimension due to redundancy. */
+      if(j>=fft_size){
+	l = i*size + (size-j);
+      }
+      else{
+	l = k;
+      }
+
+      t1 = ncs_sr->u_fft[l][0]*ncs_sr->u_fft[l][0] + ncs_sr->u_fft[l][1]*ncs_sr->u_fft[l][1];
+      t2 = ncs_sr->otf[k];
+      sum += t1*t1*t2*t2;
+    }
+  }
+
+  return sum;
+}
+
+
 /*
  * ncsSRCleanup()
  *
@@ -38,13 +109,20 @@ void ncsSRCleanup(ncsSubRegion *ncs_sr)
  *
  * Set things up for NCS for a sub-region.
  *
- * r_size - The size of the square sub-region, usually a power of 2 like 16.
+ * r_size - The size of the square sub-region, must be divisible by 2. Typically
+ *          this is a power of 2.
  */
 ncsSubRegion *ncsSRInitialize(int r_size)
 {
   int i;
   ncsSubRegion *ncs_sr;
 
+  /* Check that r_size is a divisible by 2. */
+  if ((r_size%2)!=0){
+    printf("ROI size must be divisible by 2!\n");
+    return NULL;
+  }
+  
   ncs_sr = (ncsSubRegion *)malloc(sizeof(ncsSubRegion));
   
   ncs_sr->r_size = r_size;
@@ -61,11 +139,11 @@ ncsSubRegion *ncsSRInitialize(int r_size)
     ncs_sr->otf[i] = 0.0;
     ncs_sr->u[i] = 0.0;
   }
-  
-  ncs_sr->fft_size = r_size * (r_size/2 + 1);
-  ncs_sr->normalization = 1.0/((double)(r_size * r_size));
 
-  ncs_sr->u_fft = (fftw_complex *)fftw_malloc(sizeof(fftw_complex)*ncs_sr->fft_size);
+  ncs_sr->fft_size = r_size/2 + 1; 
+  ncs_sr->normalization = 1.0/((double)(r_size*r_size));
+
+  ncs_sr->u_fft = (fftw_complex *)fftw_malloc(sizeof(fftw_complex)*r_size*ncs_sr->fft_size);
   ncs_sr->fft_forward = fftw_plan_dft_r2c_2d(r_size, r_size, ncs_sr->u, ncs_sr->u_fft, FFTW_ESTIMATE);
 
   return ncs_sr;
@@ -73,14 +151,16 @@ ncsSubRegion *ncsSRInitialize(int r_size)
 
 
 /*
- * ncsSRNewData()
+ * ncsSRNewRegion()
+ *
+ * Start analysis of a new sub-region.
  *
  * ncs_sr - Pointer to ncsSubRegion structure.
  * image - The image sub-region.
  * gamma - The CMOS variance in the sub-region.
  * alpha - Alpha parameter to use when solving.
  */
-void ncsSRNewData(ncsSubRegion *ncs_sr, double *image, double *gamma, double alpha)
+void ncsSRNewRegion(ncsSubRegion *ncs_sr, double *image, double *gamma, double alpha)
 {
   int i,size;
 
@@ -98,8 +178,10 @@ void ncsSRNewData(ncsSubRegion *ncs_sr, double *image, double *gamma, double alp
 /*
  * ncsSRSetOTF()
  *
+ * Initialize / change OTF.
+ *
  * ncs_sr - Pointer to ncsSubRegion structure.
- * otf - The micrscopes OTF.
+ * otf - The microscopes OTF.
  */
 void ncsSRSetOTF(ncsSubRegion *ncs_sr, double *otf)
 {
@@ -108,5 +190,24 @@ void ncsSRSetOTF(ncsSubRegion *ncs_sr, double *otf)
   size = ncs_sr->r_size;
   for(i=0;i<(size*size);i++){
     ncs_sr->otf[i] = otf[i];
+  }
+}
+
+
+/*
+ * ncsSRSetU()
+ *
+ * Set the u vector, this is primarily used for testing.
+ *
+ * ncs_sr - Pointer to ncsSubRegion structure.
+ * u - The new u vector.
+ */
+void ncsSRSetU(ncsSubRegion *ncs_sr, double *u)
+{
+  int i,size;
+
+  size = ncs_sr->r_size;
+  for(i=0;i<(size*size);i++){
+    ncs_sr->u[i] = u[i];
   }
 }

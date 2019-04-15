@@ -11,8 +11,8 @@
  */
 typedef struct ncsSubRegion
 {
-  int fft_size;                 /* Size of the FFT. */
   int r_size;                   /* Sub-region size, square. */
+  int fft_size;                 /* Size of the FFT on the second axis. */
   
   double alpha;                 /* NCS alpha parameter value. */
   double normalization;         /* FFT normalization constant. */
@@ -33,9 +33,12 @@ typedef struct ncsSubRegion
  * Functions.
  */
 
+double ncsSRCalcLogLikelihood(ncsSubRegion *);
+double ncsSRCalcNoiseContribution(ncsSubRegion *);
 void ncsSRCleanup(ncsSubRegion *);
 ncsSubRegion *ncsSRInitialize(int);
-void ncsSRNewData(ncsSubRegion *, double *, double *, double);
+void ncsSRNewRegion(ncsSubRegion *, double *, double *, double);
 void ncsSRSetOTF(ncsSubRegion *, double *);
+void ncsSRSetU(ncsSubRegion *, double *);
 
 #endif
