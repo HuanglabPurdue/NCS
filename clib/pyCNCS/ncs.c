@@ -15,13 +15,13 @@
 
 
 /* 
- * ncsCalcLogLikelihood()
+ * ncsSRCalcLogLikelihood()
  * 
  * Calculate the current log-likelihood given u, data and gamma.
  *
  * ncs_sr - Pointer to a ncsSubRegion structure.
  */
-double ncsCalcLogLikelihood(ncsSubRegion *ncs_sr)
+double ncsSRCalcLogLikelihood(ncsSubRegion *ncs_sr)
 {
   int i,size;
   double sum,t1,t2;
@@ -39,13 +39,13 @@ double ncsCalcLogLikelihood(ncsSubRegion *ncs_sr)
 
 
 /* 
- * ncsCalcNoiseContribution()
+ * ncsSRCalcNoiseContribution()
  * 
  * Calculate the current noise contribution.
  *
  * ncs_sr - Pointer to a ncsSubRegion structure.
  */
-double ncsCalcNoiseContribution(ncsSubRegion *ncs_sr)
+double ncsSRCalcNoiseContribution(ncsSubRegion *ncs_sr)
 {
   int i,j,k,l,size,fft_size;
   double sum,t1,t2;
