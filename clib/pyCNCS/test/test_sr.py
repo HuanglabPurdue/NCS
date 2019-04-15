@@ -31,8 +31,31 @@ def test_sr_1():
 
     ncs_sr.cleanup()
 
+def test_sr_2():
+    """
+    Test noise calculation.
+    """
+    numpy.random.seed(2)
+    
+    im_size = 16
+    ncs_sr = ncsC.NCSCSubRegion(im_size)
+
+    for i in range(10):
+        otfmask = numpy.random.uniform(low = 0.0, high = 10.0, size = (im_size, im_size))
+        u = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
+
+        ncs_sr.setOTF(otfmask)
+        ncs_sr.setU(u)
+        t1 = ncs_sr.calcNoiseContribution()
+
+        t2 = pyRef.calcNoiseContribution(u, otfmask)
+
+        assert(numpy.allclose(t1,t2))
+
+    ncs_sr.cleanup()
+
 
     
 if (__name__ == "__main__"):
-    test_sr_1()
+    test_sr_2()
     

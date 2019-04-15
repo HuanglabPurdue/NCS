@@ -61,23 +61,40 @@ double ncsSRCalcNoiseContribution(ncsSubRegion *ncs_sr)
     ncs_sr->u_fft[i][0] = ncs_sr->u_fft[i][0]*ncs_sr->normalization;
     ncs_sr->u_fft[i][1] = ncs_sr->u_fft[i][1]*ncs_sr->normalization;
   }
+
+  /*
+  for(i=0;i<(size*fft_size);i++){
+    t1 = ncs_sr->u_fft[i][0]*ncs_sr->u_fft[i][0] + ncs_sr->u_fft[i][1]*ncs_sr->u_fft[i][1];
+    printf("%d %.5f\n", i, t1);
+  }
+  return 1.0;
+  */
   
   sum = 0.0;
   for(i=0;i<size;i++){
     for(j=0;j<size;j++){
+
       k = i*size+j;
 
-      /* FFT is shorter on the second dimension due to redundancy. */
+      /* 
+       * FFT is smaller to reduce redundancy. Figuring out the indexing is a headache, but
+       * necessary I think so that we can handle OTFs that are not symmetric.
+       */
       if(j>=fft_size){
-	l = i*size + (size-j);
+	if(i==0){
+	  l = size-j;
+	}
+	else{
+	  l = (size-i+1)*fft_size - j + (size - fft_size);
+	}
       }
       else{
-	l = k;
+	l = i*fft_size + j;  
       }
-
+      
       t1 = ncs_sr->u_fft[l][0]*ncs_sr->u_fft[l][0] + ncs_sr->u_fft[l][1]*ncs_sr->u_fft[l][1];
       t2 = ncs_sr->otf[k];
-      sum += t1*t1*t2*t2;
+      sum += t1*t2*t2;
     }
   }
 
@@ -141,7 +158,7 @@ ncsSubRegion *ncsSRInitialize(int r_size)
   }
 
   ncs_sr->fft_size = r_size/2 + 1; 
-  ncs_sr->normalization = 1.0/((double)(r_size*r_size));
+  ncs_sr->normalization = 1.0/((double)r_size);
 
   ncs_sr->u_fft = (fftw_complex *)fftw_malloc(sizeof(fftw_complex)*r_size*ncs_sr->fft_size);
   ncs_sr->fft_forward = fftw_plan_dft_r2c_2d(r_size, r_size, ncs_sr->u, ncs_sr->u_fft, FFTW_ESTIMATE);

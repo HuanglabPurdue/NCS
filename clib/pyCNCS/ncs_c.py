@@ -94,8 +94,9 @@ class NCSCSubRegion(object):
             if (otf.size != self.r_size*self.r_size):
                 raise NCSException("OTF size must match sub-region size!")
 
+        tmp = numpy.fft.fftshift(otf)
         ncs.ncsSRSetOTF(self.c_ncs,
-                        numpy.ascontiguousarray(otf, dtype = numpy.float64))
+                        numpy.ascontiguousarray(tmp, dtype = numpy.float64))
 
     def setU(self, u):
         

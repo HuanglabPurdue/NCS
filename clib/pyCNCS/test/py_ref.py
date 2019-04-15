@@ -15,3 +15,4 @@ def calcNoiseContribution(u, otfmask):
     tmp = numpy.abs(tmp)/normf
     tmp = (tmp*otfmask)**2
     return numpy.sum(tmp)
+
