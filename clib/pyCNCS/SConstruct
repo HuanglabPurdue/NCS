@@ -1,0 +1,77 @@
+#!python
+
+import os
+import platform
+
+# Configure build environment.
+env = None
+if (platform.system() == 'Windows'):
+
+    #
+    # Check for user defined compiler.
+    # i.e. > scons.bat -Q compiler=mingw
+    #
+    # The compiler needs to be in the users path.
+    #
+    compiler = ARGUMENTS.get('compiler', '')
+    print("Using compiler", compiler)
+    if (len(compiler) > 0):
+        env = DefaultEnvironment(tools = [compiler],
+                                 ENV = {'PATH' : os.environ['PATH'],
+                                        'TMP' : os.environ['TMP'],
+                                        'TEMP' : os.environ['TEMP']})
+        
+# Use the current environment if nothing was specified.
+if env is None:
+    env = Environment(ENV = os.environ)
+
+
+# C compiler flags.
+#
+# FIXME: Visual C flags?
+if (env['CC'] == "gcc"):
+    if (platform.system() == 'Linux'):
+        if True:
+            env.Append(CCFLAGS = ['-O3','-Wall'],
+                       LINKFLAGS = ['-Wl,-z,defs'])
+        else: # Build with debugging.
+            env.Append(CCFLAGS = ['-Og','-Wall'],
+                       LINKFLAGS = ['-Wl,-z,defs'])
+    else:
+        env.Append(CCFLAGS = ['-O3','-Wall'])
+
+# Library names and paths.
+fftw_lib = 'fftw3'
+fftw_lib_path = []
+
+#
+# OS-X specific settings, FFTW is in /usr/local/?
+#
+if (platform.system() == "Darwin"):
+    fftw_lib='libfftw3'
+    fftw_lib_path = ['/usr/local/lib']
+    env.Append(CCFLAGS='-I/usr/local/include')
+    env.Append(LDFLAGS='-L/usr/local/include')
+
+#
+# Windows specific settings library setting. Basically we are trying
+# to figure out if FFTW exists in the build environment or if we should
+# use the versions included in this package.
+#
+if (platform.system() == 'Windows'):
+    fftw_lib = 'fftw3-3'
+    conf = Configure(env)
+    if not conf.CheckLib(fftw_lib):
+        print("FFTW3 library not found, using NCS version.")
+        fftw_lib_path = ['./']
+
+#
+# NCS C library
+#
+if True:
+    Default(env.SharedLibrary('./ncs',
+                              ['./ncs.c'],
+                              LIBS = [fftw_lib, 'm'], 
+                              LIBPATH = fftw_lib_path, 
+                              CPPPATH = fftw_lib_path))
+
