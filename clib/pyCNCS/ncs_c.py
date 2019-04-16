@@ -10,7 +10,11 @@ from numpy.ctypeslib import ndpointer
 
 import pyCNCS.loadclib as loadclib
 
+
 ncs = loadclib.loadNCSCLibrary()
+
+ncs.ncsSRCalcLLGradient.argtypes = [ctypes.c_void_p,
+                                    ndpointer(dtype = numpy.float64)]
 
 ncs.ncsSRCalcLogLikelihood.argtypes = [ctypes.c_void_p]
 ncs.ncsSRCalcLogLikelihood.restype = ctypes.c_double
@@ -50,6 +54,11 @@ class NCSCSubRegion(object):
             raise NCSException("Sub region size must be divisible by 2!")
         
         self.c_ncs = ncs.ncsSRInitialize(r_size)
+
+    def calcLLGradient(self):
+        gradient = numpy.zeros(self.r_size*self.r_size, dtype = numpy.float64)
+        ncs.ncsSRCalcLLGradient(self.c_ncs, gradient)
+        return gradient    
 
     def calcLogLikelihood(self):
         return ncs.ncsSRCalcLogLikelihood(self.c_ncs)

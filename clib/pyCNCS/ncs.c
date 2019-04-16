@@ -15,6 +15,28 @@
 
 
 /* 
+ * ncsSRCalcLLGradient()
+ * 
+ * Calculate the gradient of the log-likelihood given u, data and gamma.
+ *
+ * ncs_sr - Pointer to a ncsSubRegion structure.
+ * gradient - Pointer to an array of doubles
+ */
+void ncsSRCalcLLGradient(ncsSubRegion *ncs_sr, double *gradient)
+{
+  int i,size;
+  double t1,t2;
+
+  size = ncs_sr->r_size;
+  for(i=0;i<(size*size);i++){
+    t1 = ncs_sr->data[i] + ncs_sr->gamma[i];
+    t2 = ncs_sr->u[i] + ncs_sr->gamma[i];
+    gradient[i] = 1 - t1/t2;
+  }
+}
+
+
+/* 
  * ncsSRCalcLogLikelihood()
  * 
  * Calculate the current log-likelihood given u, data and gamma.

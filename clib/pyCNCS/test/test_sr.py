@@ -52,8 +52,30 @@ def test_sr_2():
 
     ncs_sr.cleanup()
 
+def test_sr_3():
+    """
+    Test log likelihood gradient calculation.
+    """
+    im_size = 16
+    ncs_sr = ncsC.NCSCSubRegion(im_size)
+
+    for i in range(10):
+        gamma = numpy.random.uniform(low = 2.0, high = 4.0, size = (im_size, im_size))
+        image = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
+        u = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
+
+        ncs_sr.newRegion(image, gamma, 1.0)
+        ncs_sr.setU(u)
+        t1 = ncs_sr.calcLLGradient()
+
+        t2 = pyRef.calcLLGradient(u, image, gamma)
+
+        assert(numpy.allclose(t1,t2, atol = 1.0e-6))
+
+    ncs_sr.cleanup()
+
 
     
 if (__name__ == "__main__"):
-    test_sr_2()
+    test_sr_3()
     
