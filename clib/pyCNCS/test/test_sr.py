@@ -70,12 +70,33 @@ def test_sr_3():
 
         t2 = pyRef.calcLLGradient(u, image, gamma)
 
-        assert(numpy.allclose(t1,t2, atol = 1.0e-6))
+        assert(numpy.allclose(t1,t2,atol = 1.0e-6))
 
     ncs_sr.cleanup()
 
+def test_sr_4():
+    """
+    Test noise contribution gradient calculation.
+    """
+    im_size = 16
+    ncs_sr = ncsC.NCSCSubRegion(im_size)
+
+    for i in range(10):
+        otfmask = pyRef.randomOTFMask(im_size)
+        u = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
+
+        ncs_sr.setOTFMask(otfmask)
+        ncs_sr.setU(u)
+        ncs_sr.calcNoiseContribution()
+        
+        t1 = ncs_sr.calcNCGradient()
+        t2 = pyRef.calcNCGradient(u, otfmask)
+
+        assert(numpy.allclose(t1,t2,atol = 1.0e-5))
+
+    ncs_sr.cleanup()
 
     
 if (__name__ == "__main__"):
-    test_sr_3()
+    test_sr_4()
     

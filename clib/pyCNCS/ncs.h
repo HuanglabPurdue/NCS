@@ -25,7 +25,7 @@ typedef struct ncsSubRegion
   fftw_plan fft_forward;        /* FFT transform plan. */
 
   fftw_complex *u_fft;          /* FFT of current fit. */
-  
+  fftw_complex **u_fft_grad;    /* Fit gradient FFT storage. */
 } ncsSubRegion;
 
 
@@ -35,6 +35,7 @@ typedef struct ncsSubRegion
 
 void ncsSRCalcLLGradient(ncsSubRegion *, double *);
 double ncsSRCalcLogLikelihood(ncsSubRegion *);
+void ncsSRCalcNCGradient(ncsSubRegion *, double *);
 double ncsSRCalcNoiseContribution(ncsSubRegion *);
 void ncsSRCleanup(ncsSubRegion *);
 ncsSubRegion *ncsSRInitialize(int);

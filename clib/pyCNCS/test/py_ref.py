@@ -22,6 +22,17 @@ def calcLLGradient(u, data, gamma):
 def calcLogLikelihood(u, data, gamma):
     return numpy.sum(u-(data+gamma)*numpy.log(u+gamma))
 
+def calcNCGradient(u, otfmask):
+    delta = 1.0e-6
+    gradient = numpy.zeros(u.size)
+    for i in range(u.shape[0]):
+        for j in range(u.shape[1]):
+            u2 = numpy.copy(u)
+            u2[i,j] += delta
+            f1 = calcNoiseContribution(u2, otfmask)
+            f2 = calcNoiseContribution(u, otfmask)
+            gradient[i*u.shape[1]+j] = (f1 - f2)/delta
+    return gradient
 
 def calcNoiseContribution(u, otfmask):
     normf = u.shape[0]

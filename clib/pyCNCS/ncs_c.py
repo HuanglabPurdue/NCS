@@ -19,6 +19,9 @@ ncs.ncsSRCalcLLGradient.argtypes = [ctypes.c_void_p,
 ncs.ncsSRCalcLogLikelihood.argtypes = [ctypes.c_void_p]
 ncs.ncsSRCalcLogLikelihood.restype = ctypes.c_double
 
+ncs.ncsSRCalcNCGradient.argtypes = [ctypes.c_void_p,
+                                    ndpointer(dtype = numpy.float64)]
+
 ncs.ncsSRCalcNoiseContribution.argtypes = [ctypes.c_void_p]
 ncs.ncsSRCalcNoiseContribution.restype = ctypes.c_double
 
@@ -62,6 +65,11 @@ class NCSCSubRegion(object):
 
     def calcLogLikelihood(self):
         return ncs.ncsSRCalcLogLikelihood(self.c_ncs)
+
+    def calcNCGradient(self):
+        gradient = numpy.zeros(self.r_size*self.r_size, dtype = numpy.float64)
+        ncs.ncsSRCalcNCGradient(self.c_ncs, gradient)
+        return gradient    
 
     def calcNoiseContribution(self):
         return ncs.ncsSRCalcNoiseContribution(self.c_ncs)

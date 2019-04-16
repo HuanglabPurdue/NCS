@@ -17,7 +17,7 @@
 /* 
  * ncsSRCalcLLGradient()
  * 
- * Calculate the gradient of the log-likelihood given u, data and gamma.
+ * Calculate the gradient of the log-likelihood with current u, data and gamma.
  *
  * ncs_sr - Pointer to a ncsSubRegion structure.
  * gradient - Pointer to an array of doubles
@@ -39,7 +39,7 @@ void ncsSRCalcLLGradient(ncsSubRegion *ncs_sr, double *gradient)
 /* 
  * ncsSRCalcLogLikelihood()
  * 
- * Calculate the current log-likelihood given u, data and gamma.
+ * Calculate the current log-likelihood with current u, data and gamma.
  *
  * ncs_sr - Pointer to a ncsSubRegion structure.
  */
@@ -59,6 +59,54 @@ double ncsSRCalcLogLikelihood(ncsSubRegion *ncs_sr)
   return sum;
 }
 
+
+/* 
+ * ncsSRCalcNCGradient()
+ * 
+ * Calculate the gradient of the current noise contribution. The expectation
+ * is that will be called after ncsSRCalcNoiseContribution() which will 
+ * calculate the FFT of the current fit.
+ *
+ * ncs_sr - Pointer to a ncsSubRegion structure.
+ */
+void ncsSRCalcNCGradient(ncsSubRegion *ncs_sr, double *gradient)
+{
+  int i,j,k,l,m,size,fft_size;
+  double sum,t1,t2;
+  fftw_complex *ft,*ft_g;
+
+  size = ncs_sr->r_size;
+  fft_size = ncs_sr->fft_size;
+  ft = ncs_sr->u_fft;
+  
+  for(i=0;i<(size*size);i++){
+    ft_g = ncs_sr->u_fft_grad[i];
+    sum = 0.0;
+    for(j=0;j<size;j++){
+      for(k=0;k<size;k++){
+	l = j*size+k;
+
+	/* FFT has a different size than the OTF mask. */
+	if(k>=fft_size){
+	  if(j==0){
+	    m = size-k;
+	  }
+	  else{
+	    m = (size-j+1)*fft_size - k + (size - fft_size);
+	  }
+	}
+	else{
+	  m = j*fft_size + k;  
+	}
+
+	t1 = ft_g[m][0]*ft[m][0] + ft_g[m][1]*ft[m][1];
+	t2 = ncs_sr->otf_mask[l];
+	sum += 2.0*t1*t2*t2;
+      }
+    }
+    gradient[i] = sum;
+  }
+}
 
 /* 
  * ncsSRCalcNoiseContribution()
@@ -124,6 +172,8 @@ double ncsSRCalcNoiseContribution(ncsSubRegion *ncs_sr)
  */
 void ncsSRCleanup(ncsSubRegion *ncs_sr)
 {
+  int i;
+  
   free(ncs_sr->data);
   free(ncs_sr->gamma);
   free(ncs_sr->otf_mask);
@@ -133,6 +183,11 @@ void ncsSRCleanup(ncsSubRegion *ncs_sr)
   
   fftw_free(ncs_sr->u_fft);
 
+  for(i=0;i<(ncs_sr->r_size*ncs_sr->r_size);i++){
+    fftw_free(ncs_sr->u_fft_grad[i]);
+  }
+  free(ncs_sr->u_fft_grad);
+  
   free(ncs_sr);
 }
 
@@ -147,7 +202,7 @@ void ncsSRCleanup(ncsSubRegion *ncs_sr)
  */
 ncsSubRegion *ncsSRInitialize(int r_size)
 {
-  int i;
+  int i,j,fft_size;
   ncsSubRegion *ncs_sr;
 
   /* Check that r_size is a divisible by 2. */
@@ -173,11 +228,30 @@ ncsSubRegion *ncsSRInitialize(int r_size)
     ncs_sr->u[i] = 0.0;
   }
 
-  ncs_sr->fft_size = r_size/2 + 1; 
+  fft_size = r_size/2 + 1;
+  ncs_sr->fft_size = fft_size; 
   ncs_sr->normalization = 1.0/((double)r_size);
 
-  ncs_sr->u_fft = (fftw_complex *)fftw_malloc(sizeof(fftw_complex)*r_size*ncs_sr->fft_size);
+  ncs_sr->u_fft = (fftw_complex *)fftw_malloc(sizeof(fftw_complex)*r_size*fft_size);
   ncs_sr->fft_forward = fftw_plan_dft_r2c_2d(r_size, r_size, ncs_sr->u, ncs_sr->u_fft, FFTW_ESTIMATE);
+
+  /* 
+   * This is an optimization for calculating the noise contribution gradient. For
+   * the gradient calculation we need the FFT of arrays that are all zero except
+   * for a 1.0 at a single point. To save effort we calculate all these FFTs now.
+   */
+  ncs_sr->u_fft_grad = (fftw_complex **)malloc(sizeof(fftw_complex *)*r_size*r_size);
+  for(i=0;i<(r_size*r_size);i++){
+    ncs_sr->u_fft_grad[i] = (fftw_complex *)fftw_malloc(sizeof(fftw_complex)*r_size*fft_size);
+			     
+    ncs_sr->u[i] = 1.0;
+    fftw_execute(ncs_sr->fft_forward);
+    for(j=0;j<(r_size*fft_size);j++){
+      ncs_sr->u_fft_grad[i][j][0] = ncs_sr->u_fft[j][0]*ncs_sr->normalization;
+      ncs_sr->u_fft_grad[i][j][1] = ncs_sr->u_fft[j][1]*ncs_sr->normalization;
+    }
+    ncs_sr->u[i] = 0.0;
+  }
 
   return ncs_sr;
 }
