@@ -7,6 +7,8 @@
 import ctypes
 import numpy
 from numpy.ctypeslib import ndpointer
+import scipy
+import scipy.optimize
 
 import pyCNCS.loadclib as loadclib
 
@@ -50,6 +52,7 @@ class NCSCSubRegion(object):
 
     def __init__(self, r_size = None, strict = True, **kwds):
         super().__init__(**kwds)
+        self.alpha = None
         self.r_size = r_size
         self.strict = strict
 
@@ -58,6 +61,19 @@ class NCSCSubRegion(object):
         
         self.c_ncs = ncs.ncsSRInitialize(r_size)
 
+    def calcCost(self, u):
+        """
+        This is used by pySolve().
+        """
+        self.setU(u.reshape(self.image.shape))
+        return self.calcLogLikelihood() + self.alpha*self.calcNoiseContribution()
+
+    def calcCostGradient(self, u):
+        """
+        This is used by pySolve().
+        """
+        return self.calcLLGradient() + self.alpha*self.calcNCGradient()
+    
     def calcLLGradient(self):
         gradient = numpy.zeros(self.r_size*self.r_size, dtype = numpy.float64)
         ncs.ncsSRCalcLLGradient(self.c_ncs, gradient)
@@ -79,6 +95,7 @@ class NCSCSubRegion(object):
         self.c_ncs = None
 
     def newRegion(self, image, gamma, alpha):
+        self.image = image
 
         # Checks.
         if self.strict:
@@ -100,6 +117,51 @@ class NCSCSubRegion(object):
                            numpy.ascontiguousarray(gamma, dtype = numpy.float64),
                            alpha)
 
+    def pySolve(self, alpha, verbose = True):
+        """
+        This is primarily for testing.
+
+        Solve using scipy L-BFGS-B minimizer, without gradient information.
+        """
+        self.alpha = alpha
+        
+        opts = {'disp' : verbose, 'maxiter' : 200}
+        outi = scipy.optimize.minimize(self.calcCost,
+                                       self.image,
+                                       method='L-BFGS-B',
+                                       options=opts)
+
+        if verbose:
+            print("Status", outi.status) 
+            print("Message", outi.message)
+            print("Iterations", outi.nit)
+            
+        outix = outi.x.reshape(self.image.shape)
+        return outix
+
+    def pySolveGradient(self, alpha, verbose = True):
+        """
+        This is primarily for testing.
+
+        Solve using scipy L-BFGS-B minimizer, using gradient information.
+        """
+        self.alpha = alpha
+        
+        opts = {'disp' : verbose, 'maxiter' : 200}
+        outi = scipy.optimize.minimize(self.calcCost,
+                                       self.image,
+                                       jac = self.calcCostGradient,
+                                       method='L-BFGS-B',
+                                       options=opts)
+
+        if verbose:
+            print("Status", outi.status) 
+            print("Message", outi.message)
+            print("Iterations", outi.nit)
+            
+        outix = outi.x.reshape(self.image.shape)
+        return outix
+        
     def setOTFMask(self, otf_mask):
         
         # Checks.

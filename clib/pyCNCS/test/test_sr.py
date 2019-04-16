@@ -96,7 +96,35 @@ def test_sr_4():
 
     ncs_sr.cleanup()
 
+def test_sr_5():
+    """
+    Test solvers.
+    """
+    im_size = 16
+    ncs_sr = ncsC.NCSCSubRegion(im_size)
+    alpha = 0.02
+    verbose = False
+    
+    for i in range(10):
+        gamma = numpy.random.uniform(low = 2.0, high = 4.0, size = (im_size, im_size))
+        image = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
+        otfmask = pyRef.randomOTFMask(im_size)
+
+        ncs_sr.newRegion(image, gamma, alpha)
+        ncs_sr.setOTFMask(otfmask)
+
+        im1 = pyRef.ncsSolve(image, gamma, otfmask, alpha, verbose = verbose)
+        im2 = ncs_sr.pySolve(alpha, verbose = verbose)
+        im3 = ncs_sr.pySolveGradient(alpha, verbose = verbose)
+        
+        print(numpy.max(numpy.abs(im1-im2)), numpy.max(numpy.abs(im1-im3)))
+
+        assert(numpy.allclose(im1,im2,atol = 1.0e-2))
+        assert(numpy.allclose(im1,im3,atol = 1.0e-2))
+
+    ncs_sr.cleanup()
+
     
 if (__name__ == "__main__"):
-    test_sr_4()
+    test_sr_5()
     
