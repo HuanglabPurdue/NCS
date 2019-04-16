@@ -28,14 +28,14 @@ ncs.ncsSRNewRegion.argtypes = [ctypes.c_void_p,
                                ndpointer(dtype = numpy.float64),
                                ctypes.c_double]
 
-ncs.ncsSRSetOTF.argtypes = [ctypes.c_void_p,
-                            ndpointer(dtype = numpy.float64)]
+ncs.ncsSRSetOTFMask.argtypes = [ctypes.c_void_p,
+                                ndpointer(dtype = numpy.float64)]
 
 ncs.ncsSRSetU.argtypes = [ctypes.c_void_p,
                           ndpointer(dtype = numpy.float64)]
 
 
-class NCSCExecption(Exception):
+class NCSCException(Exception):
     pass
 
 
@@ -67,36 +67,44 @@ class NCSCSubRegion(object):
         if self.strict:
 
             if (image.shape[0] != image.shape[1]):
-                raise NCSException("Sub-region image must be square!")
+                raise NCSCException("Sub-region image must be square!")
                         
             if (image.size != self.r_size*self.r_size):
-                raise NCSException("Sub-region image size must match sub-region size!")
+                raise NCSCException("Sub-region image size must match sub-region size!")
 
             if (gamma.shape[0] != gamma.shape[1]):
-                raise NCSException("Sub-region gamma must be square!")
+                raise NCSCException("Sub-region gamma must be square!")
                         
             if (gamma.size != self.r_size*self.r_size):
-                raise NCSException("Sub-region gamma size must match sub-region size!")
+                raise NCSCException("Sub-region gamma size must match sub-region size!")
 
         ncs.ncsSRNewRegion(self.c_ncs,
                            numpy.ascontiguousarray(image, dtype = numpy.float64),
                            numpy.ascontiguousarray(gamma, dtype = numpy.float64),
                            alpha)
 
-    def setOTF(self, otf):
+    def setOTFMask(self, otf_mask):
         
         # Checks.
         if self.strict:
 
-            if (otf.shape[0] != otf.shape[1]):
-                raise NCSException("OTF must be square!")
+            if (otf_mask.shape[0] != otf_mask.shape[1]):
+                raise NCSCException("OTF must be square!")
                         
-            if (otf.size != self.r_size*self.r_size):
-                raise NCSException("OTF size must match sub-region size!")
+            if (otf_mask.size != self.r_size*self.r_size):
+                raise NCSCException("OTF size must match sub-region size!")
 
-        tmp = numpy.fft.fftshift(otf)
-        ncs.ncsSRSetOTF(self.c_ncs,
-                        numpy.ascontiguousarray(tmp, dtype = numpy.float64))
+            lr = numpy.fliplr(otf_mask)
+            if not numpy.allclose(otf_mask, lr):
+                raise NCSCException("OTF must by symmetric!")
+            
+            ud = numpy.flipud(otf_mask)
+            if not numpy.allclose(otf_mask, ud):
+                raise NCSCException("OTF must by symmetric!")
+            
+        tmp = numpy.fft.fftshift(otf_mask)
+        ncs.ncsSRSetOTFMask(self.c_ncs,
+                            numpy.ascontiguousarray(tmp, dtype = numpy.float64))
 
     def setU(self, u):
         

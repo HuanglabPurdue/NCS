@@ -63,23 +63,16 @@ double ncsSRCalcNoiseContribution(ncsSubRegion *ncs_sr)
   }
 
   /*
-  for(i=0;i<(size*fft_size);i++){
-    t1 = ncs_sr->u_fft[i][0]*ncs_sr->u_fft[i][0] + ncs_sr->u_fft[i][1]*ncs_sr->u_fft[i][1];
-    printf("%d %.5f\n", i, t1);
-  }
-  return 1.0;
-  */
-  
+   * FIXME: It seems like there should be some symmetries here that we could
+   *        take advantage of to simplify the math and the indexing. The OTF
+   *        mask is expected to be symmetric.
+   */
   sum = 0.0;
   for(i=0;i<size;i++){
     for(j=0;j<size;j++){
-
       k = i*size+j;
 
-      /* 
-       * FFT is smaller to reduce redundancy. Figuring out the indexing is a headache, but
-       * necessary I think so that we can handle OTFs that are not symmetric.
-       */
+      /* FFT has a different size than the OTF mask. */
       if(j>=fft_size){
 	if(i==0){
 	  l = size-j;
@@ -93,7 +86,7 @@ double ncsSRCalcNoiseContribution(ncsSubRegion *ncs_sr)
       }
       
       t1 = ncs_sr->u_fft[l][0]*ncs_sr->u_fft[l][0] + ncs_sr->u_fft[l][1]*ncs_sr->u_fft[l][1];
-      t2 = ncs_sr->otf[k];
+      t2 = ncs_sr->otf_mask[k];
       sum += t1*t2*t2;
     }
   }
@@ -111,7 +104,8 @@ void ncsSRCleanup(ncsSubRegion *ncs_sr)
 {
   free(ncs_sr->data);
   free(ncs_sr->gamma);
-  free(ncs_sr->otf);
+  free(ncs_sr->otf_mask);
+  free(ncs_sr->u);
   
   fftw_destroy_plan(ncs_sr->fft_forward);
   
@@ -147,13 +141,13 @@ ncsSubRegion *ncsSRInitialize(int r_size)
 
   ncs_sr->data = (double *)malloc(sizeof(double)*r_size*r_size);
   ncs_sr->gamma = (double *)malloc(sizeof(double)*r_size*r_size);
-  ncs_sr->otf = (double *)malloc(sizeof(double)*r_size*r_size);
+  ncs_sr->otf_mask = (double *)malloc(sizeof(double)*r_size*r_size);
   ncs_sr->u = (double *)malloc(sizeof(double)*r_size*r_size);
 
   for(i=0;i<(r_size*r_size);i++){
     ncs_sr->data[i] = 0.0;
     ncs_sr->gamma[i] = 0.0;
-    ncs_sr->otf[i] = 0.0;
+    ncs_sr->otf_mask[i] = 0.0;
     ncs_sr->u[i] = 0.0;
   }
 
@@ -193,20 +187,20 @@ void ncsSRNewRegion(ncsSubRegion *ncs_sr, double *image, double *gamma, double a
 
 
 /*
- * ncsSRSetOTF()
+ * ncsSRSetOTFMask()
  *
- * Initialize / change OTF.
+ * Initialize / change OTF mask.
  *
  * ncs_sr - Pointer to ncsSubRegion structure.
  * otf - The microscopes OTF.
  */
-void ncsSRSetOTF(ncsSubRegion *ncs_sr, double *otf)
+void ncsSRSetOTFMask(ncsSubRegion *ncs_sr, double *otf_mask)
 {
   int i,size;
 
   size = ncs_sr->r_size;
   for(i=0;i<(size*size);i++){
-    ncs_sr->otf[i] = otf[i];
+    ncs_sr->otf_mask[i] = otf_mask[i];
   }
 }
 

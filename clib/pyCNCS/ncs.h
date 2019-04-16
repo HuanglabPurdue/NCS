@@ -19,7 +19,7 @@ typedef struct ncsSubRegion
 
   double *data;                 /* Image data (of size r_size x r_size). */
   double *gamma;                /* CMOS variance data (of size r_size x r_size). */
-  double *otf;                  /* OTF (of size r_size x r_size). */
+  double *otf_mask;             /* OTF mask (of size r_size x r_size). */
   double *u;                    /* Current fit. */
   
   fftw_plan fft_forward;        /* FFT transform plan. */
@@ -38,7 +38,7 @@ double ncsSRCalcNoiseContribution(ncsSubRegion *);
 void ncsSRCleanup(ncsSubRegion *);
 ncsSubRegion *ncsSRInitialize(int);
 void ncsSRNewRegion(ncsSubRegion *, double *, double *, double);
-void ncsSRSetOTF(ncsSubRegion *, double *);
+void ncsSRSetOTFMask(ncsSubRegion *, double *);
 void ncsSRSetU(ncsSubRegion *, double *);
 
 #endif
