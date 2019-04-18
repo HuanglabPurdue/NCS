@@ -9,6 +9,7 @@ In order to make this also work as a Python package the C library is also in the
 ### C ###
 
 * [FFTW3](http://www.fftw.org/)
+* [L-BFGS](http://www.chokkan.org/software/liblbfgs/index.html)
 
 ### Python ###
 

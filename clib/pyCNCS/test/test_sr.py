@@ -116,11 +116,16 @@ def test_sr_5():
         im1 = pyRef.ncsSolve(image, gamma, otfmask, alpha, verbose = verbose)
         im2 = ncs_sr.pySolve(alpha, verbose = verbose)
         im3 = ncs_sr.pySolveGradient(alpha, verbose = verbose)
-        
-        print(numpy.max(numpy.abs(im1-im2)), numpy.max(numpy.abs(im1-im3)))
+        im4 = ncs_sr.cSolve(alpha, verbose = verbose)
+
+        if verbose:
+            print(numpy.max(numpy.abs(im1-im2)),
+                  numpy.max(numpy.abs(im1-im3)),
+                  numpy.max(numpy.abs(im1-im4)))
 
         assert(numpy.allclose(im1,im2,atol = 1.0e-2))
         assert(numpy.allclose(im1,im3,atol = 1.0e-2))
+        assert(numpy.allclose(im1,im4,atol = 1.0e-2))
 
     ncs_sr.cleanup()
 

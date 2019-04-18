@@ -1,5 +1,7 @@
 /* 
  * C library for "Noise Correction Algorithm for sCMOS cameras".
+ *
+ * Note: We assume that lbfgsfloat_val is a double.
  * 
  * Hazen 04/19
  */
@@ -10,6 +12,7 @@
 #include <math.h>
 
 #include <fftw3.h>
+#include <lbfgs.h>
 
 #include "ncs.h"
 
@@ -177,7 +180,10 @@ void ncsSRCleanup(ncsSubRegion *ncs_sr)
   free(ncs_sr->data);
   free(ncs_sr->gamma);
   free(ncs_sr->otf_mask);
-  free(ncs_sr->u);
+  free(ncs_sr->t1);
+  free(ncs_sr->t2);
+  
+  lbfgs_free(ncs_sr->u);
   
   fftw_destroy_plan(ncs_sr->fft_forward);
   
@@ -187,8 +193,62 @@ void ncsSRCleanup(ncsSubRegion *ncs_sr)
     fftw_free(ncs_sr->u_fft_grad[i]);
   }
   free(ncs_sr->u_fft_grad);
+
+  free(ncs_sr->param);
   
   free(ncs_sr);
+}
+
+
+/*
+ * ncsSREvaluate()
+ *
+ * Callback for solver updates, used by L-BFGS method.
+ */
+static lbfgsfloatval_t ncsSREvaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step)
+{
+  int i,size;
+  lbfgsfloatval_t fx;
+  ncsSubRegion *ncs_sr;
+
+  ncs_sr = (ncsSubRegion *)instance;
+  size = ncs_sr->r_size;
+
+  /*
+   * Calculate current 'cost'.
+   */
+  fx = ncsSRCalcLogLikelihood(ncs_sr);
+  fx += ncs_sr->alpha*ncsSRCalcNoiseContribution(ncs_sr);
+
+  /*
+   * Calculate cost gradient.
+   */
+  ncsSRCalcLLGradient(ncs_sr, ncs_sr->t1);
+  ncsSRCalcNCGradient(ncs_sr, ncs_sr->t2);
+  for(i=0;i<(size*size);i++){
+    g[i] = ncs_sr->t1[i] + ncs_sr->alpha*ncs_sr->t2[i];
+  }
+  
+  return fx;
+}
+
+
+/*
+ * ncsSRGetU()
+ *
+ * Get the current u vector, usually would call this after ncsSRSolve().
+ *
+ * ncs_sr - Pointer to ncsSubRegion structure.
+ * u - Pre-allocated storage for the u vector.
+ */
+void ncsSRGetU(ncsSubRegion *ncs_sr, double *u)
+{
+  int i,size;
+
+  size = ncs_sr->r_size;
+  for(i=0;i<(size*size);i++){
+    u[i] = ncs_sr->u[i];
+  }
 }
 
 
@@ -219,12 +279,18 @@ ncsSubRegion *ncsSRInitialize(int r_size)
   ncs_sr->data = (double *)malloc(sizeof(double)*r_size*r_size);
   ncs_sr->gamma = (double *)malloc(sizeof(double)*r_size*r_size);
   ncs_sr->otf_mask = (double *)malloc(sizeof(double)*r_size*r_size);
-  ncs_sr->u = (double *)malloc(sizeof(double)*r_size*r_size);
-
+  ncs_sr->t1 = (double *)malloc(sizeof(double)*r_size*r_size);
+  ncs_sr->t2 = (double *)malloc(sizeof(double)*r_size*r_size);
+  
+  ncs_sr->u = lbfgs_malloc(r_size*r_size);
+  
   for(i=0;i<(r_size*r_size);i++){
     ncs_sr->data[i] = 0.0;
     ncs_sr->gamma[i] = 0.0;
     ncs_sr->otf_mask[i] = 0.0;
+    ncs_sr->t1[i] = 0.0;
+    ncs_sr->t2[i] = 0.0;
+ 
     ncs_sr->u[i] = 0.0;
   }
 
@@ -233,7 +299,7 @@ ncsSubRegion *ncsSRInitialize(int r_size)
   ncs_sr->normalization = 1.0/((double)r_size);
 
   ncs_sr->u_fft = (fftw_complex *)fftw_malloc(sizeof(fftw_complex)*r_size*fft_size);
-  ncs_sr->fft_forward = fftw_plan_dft_r2c_2d(r_size, r_size, ncs_sr->u, ncs_sr->u_fft, FFTW_ESTIMATE);
+  ncs_sr->fft_forward = fftw_plan_dft_r2c_2d(r_size, r_size, (double *)ncs_sr->u, ncs_sr->u_fft, FFTW_ESTIMATE);
 
   /* 
    * This is an optimization for calculating the noise contribution gradient. For
@@ -253,6 +319,10 @@ ncsSubRegion *ncsSRInitialize(int r_size)
     ncs_sr->u[i] = 0.0;
   }
 
+  /* L-BFGS parameter initialization. */
+  ncs_sr->param = (lbfgs_parameter_t *)malloc(sizeof(lbfgs_parameter_t));
+  lbfgs_parameter_init(ncs_sr->param);
+  
   return ncs_sr;
 }
 
@@ -267,18 +337,38 @@ ncsSubRegion *ncsSRInitialize(int r_size)
  * gamma - The CMOS variance in the sub-region.
  * alpha - Alpha parameter to use when solving.
  */
-void ncsSRNewRegion(ncsSubRegion *ncs_sr, double *image, double *gamma, double alpha)
+void ncsSRNewRegion(ncsSubRegion *ncs_sr, double *image, double *gamma)
 {
   int i,size;
-
-  ncs_sr->alpha = alpha;
   
   size = ncs_sr->r_size;
   for(i=0;i<(size*size);i++){
     ncs_sr->data[i] = image[i];
     ncs_sr->gamma[i] = gamma[i];
-    ncs_sr->u[i] = image[i];
   }
+}
+
+
+/*
+ * ncsSRProgress()
+ *
+ * Callback for reporting solver progress, used by L-BFGS method.
+ */
+static int ncsSRProgress(void *instance,
+			 const lbfgsfloatval_t *x,
+			 const lbfgsfloatval_t *g,
+			 const lbfgsfloatval_t fx,
+			 const lbfgsfloatval_t xnorm,
+			 const lbfgsfloatval_t gnorm,
+			 const lbfgsfloatval_t step,
+			 int n,
+			 int k,
+			 int ls)
+{
+    printf("Iteration %d:\n", k);
+    printf("  xnorm = %f, gnorm = %f, step = %f\n", xnorm, gnorm, step);
+    printf("\n");
+    return 0;
 }
 
 
@@ -317,4 +407,36 @@ void ncsSRSetU(ncsSubRegion *ncs_sr, double *u)
   for(i=0;i<(size*size);i++){
     ncs_sr->u[i] = u[i];
   }
+}
+
+
+/*
+ * ncsSRSolve()
+ *
+ * Solve for optimal u using the L-BFGS algorithm.
+ *
+ * ncs_sr - Pointer to a ncsSubRegion structure.
+ */
+int ncsSRSolve(ncsSubRegion *ncs_sr, double alpha, int verbose)
+{
+  int i,ret,size;
+  lbfgsfloatval_t fx;
+  
+  ncs_sr->alpha = alpha;
+
+  size = ncs_sr->r_size;
+
+  /* Starting values are the current image. */
+  for(i=0;i<(size*size);i++){
+    ncs_sr->u[i] = ncs_sr->data[i];
+  }
+
+  if (verbose){
+    ret = lbfgs(size*size, ncs_sr->u, &fx, ncsSREvaluate, ncsSRProgress, (void *)ncs_sr, ncs_sr->param);
+  }
+  else{
+    ret = lbfgs(size*size, ncs_sr->u, &fx, ncsSREvaluate, NULL, (void *)ncs_sr, ncs_sr->param);
+  }
+
+  return ret;
 }

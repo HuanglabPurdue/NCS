@@ -29,6 +29,9 @@ ncs.ncsSRCalcNoiseContribution.restype = ctypes.c_double
 
 ncs.ncsSRCleanup.argtypes = [ctypes.c_void_p]
 
+ncs.ncsSRGetU.argtypes = [ctypes.c_void_p,
+                          ndpointer(dtype = numpy.float64)]
+
 ncs.ncsSRInitialize.argtypes = [ctypes.c_int]
 ncs.ncsSRInitialize.restype = ctypes.c_void_p
 
@@ -42,6 +45,11 @@ ncs.ncsSRSetOTFMask.argtypes = [ctypes.c_void_p,
 
 ncs.ncsSRSetU.argtypes = [ctypes.c_void_p,
                           ndpointer(dtype = numpy.float64)]
+
+ncs.ncsSRSolve.argtypes = [ctypes.c_void_p,
+                           ctypes.c_double,
+                           ctypes.c_int]
+ncs.ncsSRSolve.restype = ctypes.c_int
 
 
 class NCSCException(Exception):
@@ -93,6 +101,17 @@ class NCSCSubRegion(object):
     def cleanup(self):
         ncs.ncsSRCleanup(self.c_ncs)
         self.c_ncs = None
+
+    def cSolve(self, alpha, verbose = True):
+        ret = ncs.ncsSRSolve(self.c_ncs, alpha, verbose)
+        if verbose:
+            print("L-BFGS method returned {0:d}".format(ret));
+        return self.getU()
+
+    def getU(self):
+        u = numpy.zeros((self.r_size, self.r_size), dtype = numpy.float64)
+        ncs.ncsSRGetU(self.c_ncs, u)
+        return u
 
     def newRegion(self, image, gamma, alpha):
         self.image = image
