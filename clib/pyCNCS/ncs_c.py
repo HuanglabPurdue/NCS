@@ -15,6 +15,15 @@ import pyCNCS.loadclib as loadclib
 
 ncs = loadclib.loadNCSCLibrary()
 
+ncs.ncsReduceNoise.argtypes = [ndpointer(dtype = numpy.float64),
+                               ndpointer(dtype = numpy.float64),
+                               ndpointer(dtype = numpy.float64),
+                               ndpointer(dtype = numpy.float64),
+                               ctypes.c_double,
+                               ctypes.c_int,
+                               ctypes.c_int,
+                               ctypes.c_int]
+
 ncs.ncsSRCalcLLGradient.argtypes = [ctypes.c_void_p,
                                     ndpointer(dtype = numpy.float64)]
 
@@ -37,8 +46,7 @@ ncs.ncsSRInitialize.restype = ctypes.c_void_p
 
 ncs.ncsSRNewRegion.argtypes = [ctypes.c_void_p,
                                ndpointer(dtype = numpy.float64),
-                               ndpointer(dtype = numpy.float64),
-                               ctypes.c_double]
+                               ndpointer(dtype = numpy.float64)]
 
 ncs.ncsSRSetOTFMask.argtypes = [ctypes.c_void_p,
                                 ndpointer(dtype = numpy.float64)]
@@ -57,7 +65,9 @@ class NCSCException(Exception):
 
 
 class NCSCSubRegion(object):
-
+    """
+    NCS solver for a square sub-region of an image.
+    """
     def __init__(self, r_size = None, strict = True, **kwds):
         super().__init__(**kwds)
         self.alpha = None
@@ -105,7 +115,11 @@ class NCSCSubRegion(object):
     def cSolve(self, alpha, verbose = True):
         ret = ncs.ncsSRSolve(self.c_ncs, alpha, verbose)
         if verbose:
-            print("L-BFGS method returned {0:d}".format(ret));
+            print("L-BFGS method returned {0:d}".format(ret))
+            
+        if self.strict and (ret != 0):
+            raise NCSCException("Solver failed with error code {0:d}!".format(ret))
+          
         return self.getU()
 
     def getU(self):
@@ -113,7 +127,7 @@ class NCSCSubRegion(object):
         ncs.ncsSRGetU(self.c_ncs, u)
         return u
 
-    def newRegion(self, image, gamma, alpha):
+    def newRegion(self, image, gamma):
         self.image = image
 
         # Checks.
@@ -133,8 +147,7 @@ class NCSCSubRegion(object):
 
         ncs.ncsSRNewRegion(self.c_ncs,
                            numpy.ascontiguousarray(image, dtype = numpy.float64),
-                           numpy.ascontiguousarray(gamma, dtype = numpy.float64),
-                           alpha)
+                           numpy.ascontiguousarray(gamma, dtype = numpy.float64))
 
     def pySolve(self, alpha, verbose = True):
         """
@@ -192,14 +205,6 @@ class NCSCSubRegion(object):
             if (otf_mask.size != self.r_size*self.r_size):
                 raise NCSCException("OTF size must match sub-region size!")
 
-            lr = numpy.fliplr(otf_mask)
-            if not numpy.allclose(otf_mask, lr):
-                raise NCSCException("OTF must by symmetric!")
-            
-            ud = numpy.flipud(otf_mask)
-            if not numpy.allclose(otf_mask, ud):
-                raise NCSCException("OTF must by symmetric!")
-            
         tmp = numpy.fft.fftshift(otf_mask)
         ncs.ncsSRSetOTFMask(self.c_ncs,
                             numpy.ascontiguousarray(tmp, dtype = numpy.float64))
@@ -217,4 +222,73 @@ class NCSCSubRegion(object):
 
         ncs.ncsSRSetU(self.c_ncs,
                       numpy.ascontiguousarray(u, dtype = numpy.float64))
+        
+
+def cReduceNoise(image, gamma, otf_mask, alpha, strict = True):
+    """
+    Run NCS on an image using pure C algorithm.
+    """
+    if strict:
+        if (otf_mask.shape[0] != otf_mask.shape[1]):
+            raise NCSCException("OTF must be square!")
+
+        if ((otf_mask.shape[0]%2)!=0):
+            raise NCSException("Sub region size must be divisible by 2!")
+        
+    ncs_image = numpy.zeros_like(image)
+    ncs.ncsReduceNoise(numpy.ascontiguousarray(ncs_image, dtype = numpy.float64),
+                       numpy.ascontiguousarray(image, dtype = numpy.float64),
+                       numpy.ascontiguousarray(gamma, dtype = numpy.float64),
+                       numpy.ascontiguousarray(otf_mask, dtype = numpy.float64),
+                       alpha,
+                       image.shape[0],
+                       image.shape[1],
+                       otf_mask.shape[0])
+    return ncs_image
+
+
+def pyReduceNoise(image, gamma, otf_mask, alpha, strict = True):
+    """
+    Run NCS on an image using a mixed C and Python algorithm.
+    
+    image - The image to run NCS on (in units of e-).
+    gamma - CMOS variance (in units of e-).
+    otf_mask - M x M array containing the OTF mask, where M is usually a power
+               of 2, like 16.
+    alpha - NCS alpha term.
+    """
+    r_size = otf_mask.shape[0]
+    s_size = r_size - 2
+    
+    # Create sub-region solver object.
+    ncs_sr = NCSCSubRegion(r_size = r_size, strict = strict)
+    ncs_sr.setOTFMask(otf_mask)
+
+    # Pad the image out by a single pixel.
+    pad_image = numpy.pad(image, 1, 'edge')
+    pad_gamma = numpy.pad(gamma, 1, 'edge')
+    
+    # Run NCS on sub regions.
+    ncs_image = numpy.zeros_like(image)
+    for i in range(0,pad_image.shape[0],s_size):
+        if ((i + r_size) > pad_image.shape[0]):
+            bx = pad_image.shape[0] - r_size - 1
+        else:
+            bx = i
+        ex = bx + r_size
+        
+        for j in range(0,pad_image.shape[1],s_size):
+            if ((j + r_size) > pad_image.shape[1]):
+                by = pad_image.shape[1] - r_size - 1
+            else:
+                by = j
+            ey = by + r_size
+
+            ncs_sr.newRegion(pad_image[bx:ex,by:ey],pad_gamma[bx:ex,by:ey])
+            im = ncs_sr.cSolve(alpha, verbose = False)
+
+            ncs_image[bx:ex-2,by:ey-2] = im[1:-1,1:-1]
+
+    ncs_sr.cleanup()
+    return ncs_image
 

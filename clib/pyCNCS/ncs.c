@@ -17,6 +17,153 @@
 #include "ncs.h"
 
 
+/*
+ * ncsReduceNoise() 
+ *
+ * Run NCS noise reduction on an image.
+ *
+ * ncs_image - Pre-allocated storage for the NCS image.
+ * image - Original image in e-.
+ * gamma - CMOS variance in units of e-^2.
+ * otf_mask - r_size x r_size array containing the OTF mask.
+ * alpha - NCS alpha term. 
+ * im_x - Image size (slow axis). 
+ * im_y - Image size (fast axis).
+ * r_size - otf_mask size.
+ */
+void ncsReduceNoise(double *ncs_image,
+		    double *image,
+		    double *gamma,
+		    double *otf_mask,
+		    double alpha,
+		    int im_x,
+		    int im_y,
+		    int r_size)
+{
+  int i,j,k,l,m,n,o,p,q;
+  int bx,by,res,s_size;
+  ncsSubRegion *ncs_sr;
+
+  printf("%d %d %d\n",im_x,im_y,r_size);
+  
+  /* Check OTF mask size. */
+  if((r_size%2)!=0){
+    printf("OTF mask size of %d is not divisible by 2!", r_size);
+    return;
+  }
+
+  q = 0;
+  s_size = r_size - 2;
+  
+  /* Initialization. */
+  ncs_sr = ncsSRInitialize(r_size);
+  ncsSRSetOTFMask(ncs_sr, otf_mask);
+
+  /*
+   * This is somewhat complicated by the goal of using a 1 pixel
+   * pad around each sub region, and also using duplicate values
+   * for sub regions that are on the edge of the image.
+   */
+  for(i=-1;i<(im_x+1);i+=s_size){
+    if((i+r_size)>(im_x+1)){
+      bx = im_x - r_size + 1;
+    }
+    else{
+      bx = i;
+    }
+    
+    for(j=-1;j<(im_y+1);j+=s_size){
+      if((j+r_size)>(im_y+1)){
+	by = im_y - r_size + 1;
+      }
+      else{
+	by = j;
+      }
+
+      /* Copy sub-region. */
+      for(k=0;k<r_size;k++){
+	if((k + bx) < 0){
+	  l = 0;
+	}
+	else if((k + bx)>=im_x){
+	  l = (im_x - 1)*im_y;
+	}
+	else{
+	  l = (k + bx)*im_y;
+	}
+	m = k*r_size;
+	for(n=0;n<r_size;n++){
+	  if((n + by) < 0){
+	    o = l;
+	  }
+	  else if((n + by)>=im_y){
+	    o = l + im_y - 1;
+	  }
+	  else{
+	    o = l + n + by;
+	  }
+	  p = m + n;
+	  ncs_sr->data[p] = image[o];
+	  ncs_sr->gamma[p] = gamma[o];
+	}
+      }
+      printf("%d %d\n",bx,by);
+      
+      /* Solve. */
+      res = ncsSRSolve(ncs_sr, alpha, 0);
+      if(res!=0){
+	printf("NCS solver failed on region %d %d with code %d!\n",bx,by,res);
+      }
+      
+      /* Copy results. */
+      for(k=1;k<(r_size-1);k++){
+	/*
+	if (bx == (im_x - r_size)){
+	  l = (k + bx + 1)*im_y;
+	}
+	else{
+	  l = (k + bx)*im_y;
+	}
+	*/
+	l = (k + bx)*im_y;
+	m = k*r_size;
+	for(n=1;n<(r_size-1);n++){
+	  /*
+	  if(by == (im_y - r_size)){
+	    o[ = l + n + by + 1;
+	  }[
+	  else{
+	    o = l + n + by;
+	  }
+	  */
+	  o = l + n + by;
+	  p = m + n;
+	  //ncs_image[o] = ncs_sr->u[p];
+	  printf("1. %d %d\n",o,p);
+	  ncs_image[o] = q;
+	}
+	printf("\n");
+      }
+      q += 1;
+      
+      /* 
+       * This keeps us from analyzing the outer edge twice, which
+       * can happen depending the values of s_size and im_y.
+       */
+      if(by == im_y - r_size + 1){
+	break;
+      }
+    }
+    if(bx == im_x - r_size + 1){
+      break;
+    }
+  }
+  
+  /* Clean up. */
+  ncsSRCleanup(ncs_sr);
+}
+
+
 /* 
  * ncsSRCalcLLGradient()
  * 
@@ -205,7 +352,11 @@ void ncsSRCleanup(ncsSubRegion *ncs_sr)
  *
  * Callback for solver updates, used by L-BFGS method.
  */
-static lbfgsfloatval_t ncsSREvaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step)
+static lbfgsfloatval_t ncsSREvaluate(void *instance,
+				     const lbfgsfloatval_t *x,
+				     lbfgsfloatval_t *g,
+				     const int n,
+				     const lbfgsfloatval_t step)
 {
   int i,size;
   lbfgsfloatval_t fx;

@@ -37,6 +37,7 @@ typedef struct ncsSubRegion
 /*
  * Functions.
  */
+void ncsReduceNoise(double *, double *, double *, double *, double, int, int, int);
 void ncsSRCalcLLGradient(ncsSubRegion *, double *);
 double ncsSRCalcLogLikelihood(ncsSubRegion *);
 void ncsSRCalcNCGradient(ncsSubRegion *, double *);
