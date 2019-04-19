@@ -1,8 +1,8 @@
 ## NCS C library ##
 
-A C library for NCS, along with a Python wrapper.
+A C library for NCS, along with a Python 3 wrapper.
 
-In order to make this also work as a Python package the C library is also in the pyCNCS directory.
+In order to make this also work as a Python package the C library is in the pyCNCS directory.
 
 ## Dependencies ##
 
@@ -11,6 +11,6 @@ In order to make this also work as a Python package the C library is also in the
 * [FFTW3](http://www.fftw.org/)
 * [L-BFGS](http://www.chokkan.org/software/liblbfgs/index.html)
 
-### Python ###
+### Python 3 ###
 
 * [numpy](http://www.numpy.org/)
