@@ -40,11 +40,9 @@ void ncsReduceNoise(double *ncs_image,
 		    int im_y,
 		    int r_size)
 {
-  int i,j,k,l,m,n,o,p,q;
+  int i,j,k,l,m,n,o,p;
   int bx,by,res,s_size;
   ncsSubRegion *ncs_sr;
-
-  printf("%d %d %d\n",im_x,im_y,r_size);
   
   /* Check OTF mask size. */
   if((r_size%2)!=0){
@@ -52,7 +50,6 @@ void ncsReduceNoise(double *ncs_image,
     return;
   }
 
-  q = 0;
   s_size = r_size - 2;
   
   /* Initialization. */
@@ -66,7 +63,7 @@ void ncsReduceNoise(double *ncs_image,
    */
   for(i=-1;i<(im_x+1);i+=s_size){
     if((i+r_size)>(im_x+1)){
-      bx = im_x - r_size + 1;
+      bx = im_x + 1 - r_size;
     }
     else{
       bx = i;
@@ -74,7 +71,7 @@ void ncsReduceNoise(double *ncs_image,
     
     for(j=-1;j<(im_y+1);j+=s_size){
       if((j+r_size)>(im_y+1)){
-	by = im_y - r_size + 1;
+	by = im_y + 1 - r_size;
       }
       else{
 	by = j;
@@ -107,7 +104,6 @@ void ncsReduceNoise(double *ncs_image,
 	  ncs_sr->gamma[p] = gamma[o];
 	}
       }
-      printf("%d %d\n",bx,by);
       
       /* Solve. */
       res = ncsSRSolve(ncs_sr, alpha, 0);
@@ -117,44 +113,24 @@ void ncsReduceNoise(double *ncs_image,
       
       /* Copy results. */
       for(k=1;k<(r_size-1);k++){
-	/*
-	if (bx == (im_x - r_size)){
-	  l = (k + bx + 1)*im_y;
-	}
-	else{
-	  l = (k + bx)*im_y;
-	}
-	*/
 	l = (k + bx)*im_y;
 	m = k*r_size;
 	for(n=1;n<(r_size-1);n++){
-	  /*
-	  if(by == (im_y - r_size)){
-	    o[ = l + n + by + 1;
-	  }[
-	  else{
-	    o = l + n + by;
-	  }
-	  */
 	  o = l + n + by;
 	  p = m + n;
-	  //ncs_image[o] = ncs_sr->u[p];
-	  printf("1. %d %d\n",o,p);
-	  ncs_image[o] = q;
+	  ncs_image[o] = ncs_sr->u[p];
 	}
-	printf("\n");
       }
-      q += 1;
       
       /* 
        * This keeps us from analyzing the outer edge twice, which
        * can happen depending the values of s_size and im_y.
        */
-      if(by == im_y - r_size + 1){
+      if(by == im_y + 1 - r_size){
 	break;
       }
     }
-    if(bx == im_x - r_size + 1){
+    if(bx == im_x + 1 - r_size){
       break;
     }
   }

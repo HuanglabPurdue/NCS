@@ -272,14 +272,14 @@ def pyReduceNoise(image, gamma, otf_mask, alpha, strict = True):
     ncs_image = numpy.zeros_like(image)
     for i in range(0,pad_image.shape[0],s_size):
         if ((i + r_size) > pad_image.shape[0]):
-            bx = pad_image.shape[0] - r_size - 1
+            bx = pad_image.shape[0] - r_size
         else:
             bx = i
         ex = bx + r_size
         
         for j in range(0,pad_image.shape[1],s_size):
             if ((j + r_size) > pad_image.shape[1]):
-                by = pad_image.shape[1] - r_size - 1
+                by = pad_image.shape[1] - r_size
             else:
                 by = j
             ey = by + r_size
