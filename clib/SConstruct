@@ -42,14 +42,15 @@ if (env['CC'] == "gcc"):
 
 # Library names and paths.
 fftw_lib = 'fftw3'
-fftw_lib_path = []
+lbfgs_lib = 'lbfgs'
+lib_paths = []
 
 #
-# OS-X specific settings, FFTW is in /usr/local/?
+# OS-X specific settings, FFTW and LBFGS are in /usr/local/?
 #
 if (platform.system() == "Darwin"):
     fftw_lib='libfftw3'
-    fftw_lib_path = ['/usr/local/lib']
+    lib_paths = ['/usr/local/lib']
     env.Append(CCFLAGS='-I/usr/local/include')
     env.Append(LDFLAGS='-L/usr/local/include')
 
@@ -60,10 +61,11 @@ if (platform.system() == "Darwin"):
 #
 if (platform.system() == 'Windows'):
     fftw_lib = 'fftw3-3'
+    lbfgs_lib = 'lbfgs'
     conf = Configure(env)
-    if not conf.CheckLib(fftw_lib):
-        print("FFTW3 library not found, using NCS version.")
-        fftw_lib_path = ['./']
+    if not (conf.CheckLib(fftw_lib) or conf.CheckLib(lbfgs_lib)):
+        print("FFTW3 or LBFGS library not found, using NCS versions.")
+        lib_paths = ['#/pyCNCS/']
 
 #
 # NCS C library
@@ -71,7 +73,7 @@ if (platform.system() == 'Windows'):
 if True:
     Default(env.SharedLibrary('./pyCNCS/ncs',
                               ['./pyCNCS/ncs.c'],
-                              LIBS = [fftw_lib, 'lbfgs', 'm'], 
-                              LIBPATH = fftw_lib_path, 
-                              CPPPATH = fftw_lib_path))
+                              LIBS = [fftw_lib, lbfgs_lib, 'm'], 
+                              LIBPATH = lib_paths, 
+                              CPPPATH = lib_paths))
 

@@ -15,6 +15,10 @@ $ cd NCS/clib
 $ scons
 ```
 
+### Windows ###
+
+A 64bit DLL (pyCNCS/ncs.dll) is provided as part of this project.
+
 ## Dependencies ##
 
 ### C ###
