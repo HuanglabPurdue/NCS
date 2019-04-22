@@ -21,7 +21,7 @@ def test_sr_1():
         image = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
         u = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
 
-        ncs_sr.newRegion(image, gamma, 1.0)
+        ncs_sr.newRegion(image, gamma)
         ncs_sr.setU(u)
         t1 = ncs_sr.calcLogLikelihood()
 
@@ -64,7 +64,7 @@ def test_sr_3():
         image = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
         u = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
 
-        ncs_sr.newRegion(image, gamma, 1.0)
+        ncs_sr.newRegion(image, gamma)
         ncs_sr.setU(u)
         t1 = ncs_sr.calcLLGradient()
 
@@ -110,7 +110,7 @@ def test_sr_5():
         image = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
         otfmask = pyRef.randomOTFMask(im_size)
 
-        ncs_sr.newRegion(image, gamma, alpha)
+        ncs_sr.newRegion(image, gamma)
         ncs_sr.setOTFMask(otfmask)
 
         im1 = pyRef.ncsSolve(image, gamma, otfmask, alpha, verbose = verbose)
