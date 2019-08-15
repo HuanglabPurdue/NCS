@@ -109,8 +109,9 @@ class NCSCSubRegion(object):
         return ncs.ncsSRCalcNoiseContribution(self.c_ncs)
 
     def cleanup(self):
-        ncs.ncsSRCleanup(self.c_ncs)
-        self.c_ncs = None
+        if self.c_ncs is not None:
+            ncs.ncsSRCleanup(self.c_ncs)
+            self.c_ncs = None
 
     def cSolve(self, alpha, verbose = True):
         ret = ncs.ncsSRSolve(self.c_ncs, alpha, verbose)
@@ -180,8 +181,16 @@ class NCSCSubRegion(object):
         self.alpha = alpha
         
         opts = {'disp' : verbose, 'maxiter' : 200}
+
+        # Bound to positive values so that we don't get NANs when
+        # calculating the log likelihood.
+        lb = numpy.zeros(self.image.size)
+        ub = numpy.ones(self.image.size) * numpy.inf
+        bounds = scipy.optimize.Bounds(lb, ub)
+         
         outi = scipy.optimize.minimize(self.calcCost,
                                        self.image,
+                                       bounds = bounds,
                                        jac = self.calcCostGradient,
                                        method='L-BFGS-B',
                                        options=opts)
@@ -205,6 +214,9 @@ class NCSCSubRegion(object):
             if (otf_mask.size != self.r_size*self.r_size):
                 raise NCSCException("OTF size must match sub-region size!")
 
+            if not checkOTFMask(otf_mask):
+                raise NCSCException("OTF does not have the expected symmetry!")
+
         tmp = numpy.fft.fftshift(otf_mask)
         ncs.ncsSRSetOTFMask(self.c_ncs,
                             numpy.ascontiguousarray(tmp, dtype = numpy.float64))
@@ -222,11 +234,28 @@ class NCSCSubRegion(object):
 
         ncs.ncsSRSetU(self.c_ncs,
                       numpy.ascontiguousarray(u, dtype = numpy.float64))
-        
 
+        
+def checkOTFMask(otf_mask):
+    """
+    Verify that the OTF mask has the correct symmetries.
+    """
+    otf_mask_fft = numpy.fft.ifft2(numpy.fft.fftshift(otf_mask))
+    if (numpy.max(numpy.imag(otf_mask_fft)) > 1.0e-12):
+        return False
+    else:
+        return True
+    
+    
 def cReduceNoise(image, gamma, otf_mask, alpha, strict = True):
     """
     Run NCS on an image using pure C algorithm.
+
+    image - The image to run NCS on (in units of e-).
+    gamma - CMOS variance (in units of e-).
+    otf_mask - M x M array containing the OTF mask, where M is usually a power
+               of 2, like 16.
+    alpha - NCS alpha term.
     """
     if strict:
         if (otf_mask.shape[0] != otf_mask.shape[1]):

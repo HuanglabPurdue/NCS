@@ -29,9 +29,12 @@ def calcLLGradient(u, data, gamma):
             f2 = calcLogLikelihood(u, data, gamma)
             gradient[i*u.shape[1]+j] = (f1 - f2)/delta
     return gradient
-    
+
+
 def calcLogLikelihood(u, data, gamma):
-    return numpy.sum(u-(data+gamma)*numpy.log(u+gamma))
+    t1 = u + gamma
+    t1[(t1<1.0e-6)] = 1.0e-6
+    return numpy.sum(u-(data+gamma)*numpy.log(t1))
 
 
 def calcNCGradient(u, otfmask):
@@ -45,6 +48,7 @@ def calcNCGradient(u, otfmask):
             f2 = calcNoiseContribution(u, otfmask)
             gradient[i*u.shape[1]+j] = (f1 - f2)/delta
     return gradient
+
 
 def calcNoiseContribution(u, otfmask):
     normf = u.shape[0]
@@ -71,8 +75,11 @@ def ncsSolve(image, gamma, otfmask, alpha, verbose = True):
 
 
 def randomOTFMask(size):
-    otfmask = numpy.random.uniform(low = 0.0, high = 1.0, size = (size, size))
-    otfmask[:,:int(size/2)] = numpy.fliplr(otfmask)[:,:int(size/2)]
-    otfmask[:int(size/2),:] = numpy.flipud(otfmask)[:int(size/2),:]
-    return otfmask
+    psf = numpy.random.uniform(low = 0.0, high = 1.0, size = (size, size))
+    otfmask = numpy.real(numpy.fft.fftshift(numpy.fft.fft2(psf)))
 
+    # Normalize properly.
+    otfmask = otfmask - numpy.min(otfmask)
+    otfmask = otfmask/numpy.max(otfmask)
+    
+    return otfmask

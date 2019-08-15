@@ -107,7 +107,7 @@ def test_sr_5():
     
     for i in range(10):
         gamma = numpy.random.uniform(low = 2.0, high = 4.0, size = (im_size, im_size))
-        image = numpy.random.uniform(low = 0.01, high = 10.0, size = (im_size, im_size))
+        image = numpy.random.uniform(low = 10.0, high = 20.0, size = (im_size, im_size))
         otfmask = pyRef.randomOTFMask(im_size)
 
         ncs_sr.newRegion(image, gamma)

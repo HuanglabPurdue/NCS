@@ -18,17 +18,19 @@ typedef struct ncsSubRegion
   double normalization;         /* FFT normalization constant. */
 
   double *data;                 /* Image data (of size r_size x r_size). */
+  double *g;                    /* Temporary gradient storage. */
   double *gamma;                /* CMOS variance data (of size r_size x r_size). */
-  double *otf_mask;             /* OTF mask (of size r_size x r_size). */
-  double *t1;                   /* Temporary gradient storage. */
-  double *t2;                   /* Temporary gradient storage. */
-  
+  double *otf_mask_sqr;         /* OTF mask squared (of size r_size x r_size). */
+  double *t1;                   /* Temporary storage (used in gradient calculation). */
+  double *t2;                   /* Temporary storage (used in gradient calculation). */
+
   lbfgsfloatval_t *u;           /* Current fit. */
   
+  fftw_plan fft_backward;       /* IFFT transform plan. */
   fftw_plan fft_forward;        /* FFT transform plan. */
 
+  fftw_complex *g_fft;          /* FFT of NC gradient. */
   fftw_complex *u_fft;          /* FFT of current fit. */
-  fftw_complex **u_fft_grad;    /* Fit gradient FFT storage. */
 
   lbfgs_parameter_t *param;     /* The parameters of the L-BFGS method. */
 } ncsSubRegion;
