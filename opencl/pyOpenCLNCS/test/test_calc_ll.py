@@ -22,39 +22,47 @@ __kernel void cll_test(__global float4 *g_u,
                        __global float4 *g_gamma,
                        __global float *g_sum) 
 {
-    float4 u[PSIZE];
-    float4 data[PSIZE];
-    float4 gamma[PSIZE];
+    int lid = get_local_id(0);
+    int i = lid*4;
+
+    __local float w1[16];
+    __local float4 u[PSIZE];
+    __local float4 data[PSIZE];
+    __local float4 gamma[PSIZE];
     
-    for(int i=0; i<PSIZE; i++){
-        u[i] = g_u[i];
-        data[i] = g_data[i];
-        gamma[i] = g_gamma[i];
+    for (int j=0; j<4; j++){
+        u[i+j] = g_u[i+j];
+        data[i+j] = g_data[i+j];
+        gamma[i+j] = g_gamma[i+j];
     }
     
-    *g_sum = calcLogLikelihood(u, data, gamma);
+    calcLogLikelihood(w1, u, data, gamma, lid);
+    *g_sum = w1[0];
 }
 
 __kernel void cll_grad_test(__global float4 *g_u,
                             __global float4 *g_data, 
                             __global float4 *g_gamma,
                             __global float4 *g_grad) 
-{
-    float4 u[PSIZE];
-    float4 data[PSIZE];
-    float4 gamma[PSIZE];
-    float4 grad[PSIZE];
+{ 
+    int lid = get_local_id(0);
+    int i = lid*4;
+
+    __local float4 u[PSIZE];
+    __local float4 data[PSIZE];
+    __local float4 gamma[PSIZE];
+    __local float4 grad[PSIZE];
     
-    for(int i=0; i<PSIZE; i++){
-        u[i] = g_u[i];
-        data[i] = g_data[i];
-        gamma[i] = g_gamma[i];
+    for (int j=0; j<4; j++){
+        u[i+j] = g_u[i+j];
+        data[i+j] = g_data[i+j];
+        gamma[i+j] = g_gamma[i+j];
     }
     
-    calcLLGradient(u, data, gamma, grad);
+    calcLLGradient(u, data, gamma, grad, lid);
 
-    for(int i=0; i<PSIZE; i++){
-        g_grad[i] = grad[i];
+    for (int j=0; j<4; j++){
+        g_grad[i+j] = grad[i+j];
     }
 }
 
@@ -98,7 +106,7 @@ def test_calc_ll():
       gamma_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = gamma)
       ll_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = ll)
 
-      program.cll_test(queue, (1,), (1,), u_buffer, data_buffer, gamma_buffer, ll_buffer)
+      program.cll_test(queue, (16,), (16,), u_buffer, data_buffer, gamma_buffer, ll_buffer)
       cl.enqueue_copy(queue, ll, ll_buffer).wait()
       queue.finish()
       
@@ -132,7 +140,7 @@ def test_calc_ll_grad():
       gamma_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = gamma)
       grad_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = grad)
       
-      program.cll_grad_test(queue, (1,), (1,), u_buffer, data_buffer, gamma_buffer, grad_buffer)
+      program.cll_grad_test(queue, (16,), (16,), u_buffer, data_buffer, gamma_buffer, grad_buffer)
       cl.enqueue_copy(queue, grad, grad_buffer).wait()
       queue.finish()
       

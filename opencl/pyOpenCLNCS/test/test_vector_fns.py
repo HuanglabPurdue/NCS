@@ -16,65 +16,95 @@ kernel_code = """
 __kernel void veccopy_test(__global float4 *g_v1,
                            __global float4 *g_v2)
 {
-    float4 v1[PSIZE];
-    float4 v2[PSIZE];
-    
-    for(int i=0; i<PSIZE; i++){
-        v2[i] = g_v2[i];
-    }
-    
-    veccopy(v1, v2);
+    int lid = get_local_id(0);
+    int i = lid*4;
 
-    for(int i=0; i<PSIZE; i++){
-        g_v1[i] = v1[i];
-    }
+    __local float4 v1[PSIZE];
+    __local float4 v2[PSIZE];
+      
+    v2[i]   = g_v2[i];
+    v2[i+1] = g_v2[i+1];
+    v2[i+2] = g_v2[i+2];
+    v2[i+3] = g_v2[i+3];
+    
+    veccopy(v1, v2, lid);
+
+    g_v1[i]   = v1[i];
+    g_v1[i+1] = v1[i+1];
+    g_v1[i+2] = v1[i+2];
+    g_v1[i+3] = v1[i+3];
 }
 
 __kernel void vecncopy_test(__global float4 *g_v1,
                             __global float4 *g_v2)
 {
-    float4 v1[PSIZE];
-    float4 v2[PSIZE];
-    
-    for(int i=0; i<PSIZE; i++){
-        v2[i] = g_v2[i];
-    }
-    
-    vecncopy(v1, v2);
+    int lid = get_local_id(0);
+    int i = lid*4;
 
-    for(int i=0; i<PSIZE; i++){
-        g_v1[i] = v1[i];
-    }
+    __local float4 v1[PSIZE];
+    __local float4 v2[PSIZE];
+      
+    v2[i]   = g_v2[i];
+    v2[i+1] = g_v2[i+1];
+    v2[i+2] = g_v2[i+2];
+    v2[i+3] = g_v2[i+3];
+    
+    vecncopy(v1, v2, lid);
+
+    g_v1[i]   = v1[i];
+    g_v1[i+1] = v1[i+1];
+    g_v1[i+2] = v1[i+2];
+    g_v1[i+3] = v1[i+3];
 }
 
 __kernel void vecdot_test(__global float4 *g_v1,
                           __global float4 *g_v2,
                           __global float *g_sum)
 {
-    float4 v1[PSIZE];
-    float4 v2[PSIZE];
-    
-    for(int i=0; i<PSIZE; i++){
-        v1[i] = g_v1[i];
-        v2[i] = g_v2[i];
-    }
-    
-    *g_sum = vecdot(v1, v2);
+    int lid = get_local_id(0);
+    int i = lid*4;
+
+    __local float w1[16];
+    __local float4 v1[PSIZE];
+    __local float4 v2[PSIZE];
+      
+    v1[i]   = g_v1[i];
+    v1[i+1] = g_v1[i+1];
+    v1[i+2] = g_v1[i+2];
+    v1[i+3] = g_v1[i+3];
+
+    v2[i]   = g_v2[i];
+    v2[i+1] = g_v2[i+1];
+    v2[i+2] = g_v2[i+2];
+    v2[i+3] = g_v2[i+3];
+
+    vecdot(w1, v1, v2, lid);
+    *g_sum = w1[0];
 }
 
 __kernel void vecisEqual_test(__global float4 *g_v1,
                               __global float4 *g_v2,
                               __global int *g_eq)
 {
-    float4 v1[PSIZE];
-    float4 v2[PSIZE];
+    int lid = get_local_id(0);
+    int i = lid*4;
+
+    __local int w1[16];
+    __local float4 v1[PSIZE];
+    __local float4 v2[PSIZE];
+      
+    v1[i]   = g_v1[i];
+    v1[i+1] = g_v1[i+1];
+    v1[i+2] = g_v1[i+2];
+    v1[i+3] = g_v1[i+3];
+
+    v2[i]   = g_v2[i];
+    v2[i+1] = g_v2[i+1];
+    v2[i+2] = g_v2[i+2];
+    v2[i+3] = g_v2[i+3];
     
-    for(int i=0; i<PSIZE; i++){
-        v1[i] = g_v1[i];
-        v2[i] = g_v2[i];
-    }
-    
-    *g_eq = vecisEqual(v1, v2);
+    vecisEqual(w1, v1, v2, lid);
+    *g_eq = w1[0];
 }
 
 __kernel void vecfma_test(__global float4 *g_v1,
@@ -82,107 +112,125 @@ __kernel void vecfma_test(__global float4 *g_v1,
                           __global float4 *g_v3,
                           float s1)
 {
-    float4 v1[PSIZE];
-    float4 v2[PSIZE];
-    float4 v3[PSIZE];
-        
-    for(int i=0; i<PSIZE; i++){
-        v2[i] = g_v2[i];
-        v3[i] = g_v3[i];
-    }
-    
-    vecfma(v1, v2, v3, s1);
+    int lid = get_local_id(0);
+    int i = lid*4;
 
-    for(int i=0; i<PSIZE; i++){
-        g_v1[i] = v1[i];
-    }
+    __local float4 v1[PSIZE];
+    __local float4 v2[PSIZE];
+    __local float4 v3[PSIZE];
+      
+    v2[i]   = g_v2[i];
+    v2[i+1] = g_v2[i+1];
+    v2[i+2] = g_v2[i+2];
+    v2[i+3] = g_v2[i+3];
+
+    v3[i]   = g_v3[i];
+    v3[i+1] = g_v3[i+1];
+    v3[i+2] = g_v3[i+2];
+    v3[i+3] = g_v3[i+3];
+    
+    vecfma(v1, v2, v3, s1, lid);
+
+    g_v1[i]   = v1[i];
+    g_v1[i+1] = v1[i+1];
+    g_v1[i+2] = v1[i+2];
+    g_v1[i+3] = v1[i+3];
 }
 
 __kernel void vecfmaInplace_test(__global float4 *g_v1,
                                  __global float4 *g_v2,
                                  float s1)
 {
-    float4 v1[PSIZE];
-    float4 v2[PSIZE];
-        
-    for(int i=0; i<PSIZE; i++){
-        v1[i] = g_v1[i];
-        v2[i] = g_v2[i];
-    }
+    int lid = get_local_id(0);
+    int i = lid*4;
+
+    __local float4 v1[PSIZE];
+    __local float4 v2[PSIZE];
+
+    v1[i]   = g_v1[i];
+    v1[i+1] = g_v1[i+1];
+    v1[i+2] = g_v1[i+2];
+    v1[i+3] = g_v1[i+3];
+
+    v2[i]   = g_v2[i];
+    v2[i+1] = g_v2[i+1];
+    v2[i+2] = g_v2[i+2];
+    v2[i+3] = g_v2[i+3];
     
-    vecfmaInplace(v1, v2, s1);
+    vecfmaInplace(v1, v2, s1, lid);
 
-    for(int i=0; i<PSIZE; i++){
-        g_v1[i] = v1[i];
-    }
-}
-
-__kernel void vecmul_test(__global float4 *g_v1,
-                          __global float4 *g_v2,
-                          __global float4 *g_v3)
-{
-    float4 v1[PSIZE];
-    float4 v2[PSIZE];
-    float4 v3[PSIZE];
-        
-    for(int i=0; i<PSIZE; i++){
-        v2[i] = g_v2[i];
-        v3[i] = g_v3[i];
-    }
-    
-    vecmul(v1, v2, v3);
-
-    for(int i=0; i<PSIZE; i++){
-        g_v1[i] = v1[i];
-    }
+    g_v1[i]   = v1[i];
+    g_v1[i+1] = v1[i+1];
+    g_v1[i+2] = v1[i+2];
+    g_v1[i+3] = v1[i+3];
 }
 
 __kernel void vecnorm_test(__global float4 *g_v1,
                            __global float *g_norm)
 {
-    float4 v1[PSIZE];
+    int lid = get_local_id(0);
+    int i = lid*4;
+
+    __local float w1[16];
+    __local float4 v1[PSIZE];
+      
+    v1[i]   = g_v1[i];
+    v1[i+1] = g_v1[i+1];
+    v1[i+2] = g_v1[i+2];
+    v1[i+3] = g_v1[i+3];
     
-    for(int i=0; i<PSIZE; i++){
-        v1[i] = g_v1[i];
-    }
-    
-    *g_norm = vecnorm(v1);
+    vecnorm(w1, v1, lid);
+    *g_norm = w1[0];    
 }
 
 __kernel void vecscaleInplace_test(__global float4 *g_v1,
                                    float scale)
 {
-    float4 v1[PSIZE];
+    int lid = get_local_id(0);
+    int i = lid*4;
 
-    for(int i=0; i<PSIZE; i++){
-        v1[i] = g_v1[i];
-    }
+    __local float4 v1[PSIZE];
+      
+    v1[i]   = g_v1[i];
+    v1[i+1] = g_v1[i+1];
+    v1[i+2] = g_v1[i+2];
+    v1[i+3] = g_v1[i+3];
 
-    vecscaleInplace(v1, scale);
+    vecscaleInplace(v1, scale, lid);
 
-    for(int i=0; i<PSIZE; i++){
-        g_v1[i] = v1[i];
-    }
+    g_v1[i]   = v1[i];
+    g_v1[i+1] = v1[i+1];
+    g_v1[i+2] = v1[i+2];
+    g_v1[i+3] = v1[i+3];
 }
 
 __kernel void vecsub_test(__global float4 *g_v1,
                           __global float4 *g_v2,
                           __global float4 *g_v3)
 {
-    float4 v1[PSIZE];
-    float4 v2[PSIZE];
-    float4 v3[PSIZE];
-        
-    for(int i=0; i<PSIZE; i++){
-        v2[i] = g_v2[i];
-        v3[i] = g_v3[i];
-    }
-    
-    vecsub(v1, v2, v3);
+    int lid = get_local_id(0);
+    int i = lid*4;
 
-    for(int i=0; i<PSIZE; i++){
-        g_v1[i] = v1[i];
-    }
+    __local float4 v1[PSIZE];
+    __local float4 v2[PSIZE];
+    __local float4 v3[PSIZE];
+      
+    v2[i]   = g_v2[i];
+    v2[i+1] = g_v2[i+1];
+    v2[i+2] = g_v2[i+2];
+    v2[i+3] = g_v2[i+3];
+
+    v3[i]   = g_v3[i];
+    v3[i+1] = g_v3[i+1];
+    v3[i+2] = g_v3[i+2];
+    v3[i+3] = g_v3[i+3];
+    
+    vecsub(v1, v2, v3, lid);
+
+    g_v1[i]   = v1[i];
+    g_v1[i+1] = v1[i+1];
+    g_v1[i+2] = v1[i+2];
+    g_v1[i+3] = v1[i+3];
 }
 
 """
@@ -221,7 +269,7 @@ def test_veccopy():
    v1_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v1)
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
 
-   program.veccopy_test(queue, (1,), (1,), v1_buffer, v2_buffer)
+   program.veccopy_test(queue, (16,), (16,), v1_buffer, v2_buffer)
    cl.enqueue_copy(queue, v1, v1_buffer).wait()
    queue.finish()
 
@@ -240,7 +288,7 @@ def test_vecncopy():
    v1_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v1)
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
 
-   program.vecncopy_test(queue, (1,), (1,), v1_buffer, v2_buffer)
+   program.vecncopy_test(queue, (16,), (16,), v1_buffer, v2_buffer)
    cl.enqueue_copy(queue, v1, v1_buffer).wait()
    queue.finish()
    
@@ -261,7 +309,7 @@ def test_vecdot():
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
    v3_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v3)
    
-   program.vecdot_test(queue, (1,), (1,), v1_buffer, v2_buffer, v3_buffer)
+   program.vecdot_test(queue, (16,), (16,), v1_buffer, v2_buffer, v3_buffer)
    cl.enqueue_copy(queue, v3, v3_buffer).wait()
    queue.finish()
 
@@ -282,7 +330,7 @@ def test_vecisEqual_1():
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
    v3_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v3)
    
-   program.vecisEqual_test(queue, (1,), (1,), v1_buffer, v2_buffer, v3_buffer)
+   program.vecisEqual_test(queue, (16,), (16,), v1_buffer, v2_buffer, v3_buffer)
    cl.enqueue_copy(queue, v3, v3_buffer).wait()
    queue.finish()
 
@@ -303,7 +351,7 @@ def test_vecisEqual_2():
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
    v3_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v3)
    
-   program.vecisEqual_test(queue, (1,), (1,), v1_buffer, v2_buffer, v3_buffer)
+   program.vecisEqual_test(queue, (16,), (16,), v1_buffer, v2_buffer, v3_buffer)
    cl.enqueue_copy(queue, v3, v3_buffer).wait()
    queue.finish()
 
@@ -326,7 +374,7 @@ def test_vecfma():
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
    v3_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v3)
 
-   program.vecfma_test(queue, (1,), (1,), v1_buffer, v2_buffer, v3_buffer, v4)
+   program.vecfma_test(queue, (16,), (16,), v1_buffer, v2_buffer, v3_buffer, v4)
    cl.enqueue_copy(queue, v1, v1_buffer).wait()
    queue.finish()
    
@@ -347,7 +395,7 @@ def test_vecfmaInplace():
    v1_buffer = cl.Buffer(context, cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR, hostbuf = v1)
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
    
-   program.vecfmaInplace_test(queue, (1,), (1,), v1_buffer, v2_buffer, v3)
+   program.vecfmaInplace_test(queue, (16,), (16,), v1_buffer, v2_buffer, v3)
    cl.enqueue_copy(queue, v1, v1_buffer).wait()
    queue.finish()
    
@@ -355,28 +403,6 @@ def test_vecfmaInplace():
 
    pyRef.vecfmaInplace(v1_c, v2_c, v3)
    assert numpy.allclose(v1_c, v2_c*v3 + v1_ref)
-
-def test_vecmul():
-   v1 = numpy.zeros(n_pts, dtype = numpy.float32)
-   v2 = numpy.random.uniform(low = 1.0, high = 10.0, size = n_pts).astype(dtype = numpy.float32)
-   v3 = numpy.random.uniform(low = 1.0, high = 10.0, size = n_pts).astype(dtype = numpy.float32)
-
-   v1_c = numpy.copy(v1)
-   v2_c = numpy.copy(v2)
-   v3_c = numpy.copy(v3)
-
-   v1_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v1)
-   v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
-   v3_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v3)
-
-   program.vecmul_test(queue, (1,), (1,), v1_buffer, v2_buffer, v3_buffer)
-   cl.enqueue_copy(queue, v1, v1_buffer).wait()
-   queue.finish()
-
-   assert numpy.allclose(v1, v2*v3)
-
-   pyRef.vecmul(v1_c, v2_c, v3_c)
-   assert numpy.allclose(v1_c, v2_c*v3_c)
 
 def test_vecnorm():
    v1 = numpy.random.uniform(low = 1.0, high = 10.0, size = n_pts).astype(dtype = numpy.float32)
@@ -387,7 +413,7 @@ def test_vecnorm():
    v1_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v1)
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
 
-   program.vecnorm_test(queue, (1,), (1,), v1_buffer, v2_buffer)
+   program.vecnorm_test(queue, (16,), (16,), v1_buffer, v2_buffer)
    cl.enqueue_copy(queue, v2, v2_buffer).wait()
    queue.finish()
    
@@ -405,7 +431,7 @@ def test_vecscaleInplace():
    
    v1_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v1)
 
-   program.vecscaleInplace_test(queue, (1,), (1,), v1_buffer, v2)
+   program.vecscaleInplace_test(queue, (16,), (16,), v1_buffer, v2)
    cl.enqueue_copy(queue, v1, v1_buffer).wait()
    queue.finish()
    
@@ -427,7 +453,7 @@ def test_vecsub():
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
    v3_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v3)
    
-   program.vecsub_test(queue, (1,), (1,), v1_buffer, v2_buffer, v3_buffer)
+   program.vecsub_test(queue, (16,), (16,), v1_buffer, v2_buffer, v3_buffer)
    cl.enqueue_copy(queue, v1, v1_buffer).wait()
    queue.finish()
 

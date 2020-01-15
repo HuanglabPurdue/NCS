@@ -11,7 +11,8 @@ import pyOpenCLNCS
 import pyOpenCLNCS.py_ref as pyRef
 
 kernel_code = """
-__kernel void fft4_test(__global float4 *x_r, __global float4 *x_c, __global float4 *y_r, __global float4 *y_c) {
+__kernel void fft4_test(__global float4 *x_r, __global float4 *x_c, __global float4 *y_r, __global float4 *y_c) 
+{
     float4 r;
     float4 c;
     
@@ -24,7 +25,8 @@ __kernel void fft4_test(__global float4 *x_r, __global float4 *x_c, __global flo
 __kernel void ifft4_test(__global float4 *x_r, 
                          __global float4 *x_c, 
                          __global float4 *y_r, 
-                         __global float4 *y_c) {
+                         __global float4 *y_c) 
+{
     float4 r;
     float4 c;
     
@@ -34,7 +36,8 @@ __kernel void ifft4_test(__global float4 *x_r,
     y_c[0] = c;
 }
 
-__kernel void fft8_test(__global float4 *x_r, __global float4 *x_c, __global float4 *y_r, __global float4 *y_c) {
+__kernel void fft8_test(__global float4 *x_r, __global float4 *x_c, __global float4 *y_r, __global float4 *y_c) 
+{
     float4 t1_r[2];
     float4 t1_c[2];
     float4 t2_r[2];
@@ -56,7 +59,8 @@ __kernel void fft8_test(__global float4 *x_r, __global float4 *x_c, __global flo
 __kernel void ifft8_test(__global float4 *x_r, 
                          __global float4 *x_c, 
                          __global float4 *y_r, 
-                         __global float4 *y_c) {
+                         __global float4 *y_c) 
+{
     float4 t1_r[2];
     float4 t1_c[2];
     float4 t2_r[2];
@@ -75,7 +79,8 @@ __kernel void ifft8_test(__global float4 *x_r,
     y_c[1] = t2_c[1];
 }
 
-__kernel void fft16_test(__global float4 *x_r, __global float4 *x_c, __global float4 *y_r, __global float4 *y_c) {
+__kernel void fft16_test(__global float4 *x_r, __global float4 *x_c, __global float4 *y_r, __global float4 *y_c) 
+{
     float4 t1_r[4];
     float4 t1_c[4];
     float4 t2_r[4];
@@ -97,7 +102,8 @@ __kernel void fft16_test(__global float4 *x_r, __global float4 *x_c, __global fl
 __kernel void ifft16_test(__global float4 *x_r, 
                           __global float4 *x_c, 
                           __global float4 *y_r, 
-                          __global float4 *y_c) {
+                          __global float4 *y_c) 
+{
     float4 t1_r[4];
     float4 t1_c[4];
     float4 t2_r[4];
@@ -119,84 +125,104 @@ __kernel void ifft16_test(__global float4 *x_r,
 __kernel void fft_16x16_test(__global float4 *x_r, 
                              __global float4 *x_c, 
                              __global float4 *y_r, 
-                             __global float4 *y_c) {
-    float4 t1_r[4*16];
-    float4 t1_c[4*16];
-    float4 t2_r[4*16];
-    float4 t2_c[4*16];
+                             __global float4 *y_c) 
+{
+    int lid = get_local_id(0);
+    int i = lid*4;
+    int j;
+
+    __local float4 t1_r[PSIZE];
+    __local float4 t1_c[PSIZE];
+    __local float4 t2_r[PSIZE];
+    __local float4 t2_c[PSIZE];
     
-    for(int i=0; i<(4*16); i++){
-        t1_r[i] = x_r[i];
-        t1_c[i] = x_c[i];
+    for(j=0; j<4; j++){
+        t1_r[i+j] = x_r[i+j];
+        t1_c[i+j] = x_c[i+j];
     }
     
-    fft_16x16(t1_r, t1_c, t2_r, t2_c);
+    fft_16x16_wg16(t1_r, t1_c, t2_r, t2_c, lid);
      
-    for(int i=0; i<(4*16); i++){
-        y_r[i] = t2_r[i];
-        y_c[i] = t2_c[i];
+    for(j=0; j<4; j++){
+        y_r[i+j] = t2_r[i+j];
+        y_c[i+j] = t2_c[i+j];
     }
 }
 
 __kernel void ifft_16x16_test(__global float4 *x_r, 
                               __global float4 *x_c, 
                               __global float4 *y_r, 
-                              __global float4 *y_c) {
-    float4 t1_r[4*16];
-    float4 t1_c[4*16];
-    float4 t2_r[4*16];
-    float4 t2_c[4*16];
+                              __global float4 *y_c) 
+{
+    int lid = get_local_id(0);
+    int i = lid*4;
+    int j;
+
+    __local float4 t1_r[PSIZE];
+    __local float4 t1_c[PSIZE];
+    __local float4 t2_r[PSIZE];
+    __local float4 t2_c[PSIZE];
     
-    for(int i=0; i<(4*16); i++){
-        t1_r[i] = x_r[i];
-        t1_c[i] = x_c[i];
+    for(j=0; j<4; j++){
+        t1_r[i+j] = x_r[i+j];
+        t1_c[i+j] = x_c[i+j];
     }
     
-    ifft_16x16(t1_r, t1_c, t2_r, t2_c);
+    ifft_16x16_wg16(t1_r, t1_c, t2_r, t2_c, lid);
      
-    for(int i=0; i<(4*16); i++){
-        y_r[i] = t2_r[i];
-        y_c[i] = t2_c[i];
+    for(j=0; j<4; j++){
+        y_r[i+j] = t2_r[i+j];
+        y_c[i+j] = t2_c[i+j];
     }
 }
 
 __kernel void fft_16x16_inplace_test(__global float4 *x_r,
                                      __global float4 *x_c, 
                                      __global float4 *y_r,
-                                     __global float4 *y_c) {
-    float4 t1_r[4*16];
-    float4 t1_c[4*16];
+                                     __global float4 *y_c) 
+{
+    int lid = get_local_id(0);
+    int i = lid*4;
+    int j;
+
+    __local float4 t1_r[PSIZE];
+    __local float4 t1_c[PSIZE];
     
-    for(int i=0; i<(4*16); i++){
-        t1_r[i] = x_r[i];
-        t1_c[i] = x_c[i];
+    for(j=0; j<4; j++){
+        t1_r[i+j] = x_r[i+j];
+        t1_c[i+j] = x_c[i+j];
     }
     
-    fft_16x16(t1_r, t1_c, t1_r, t1_c);
+    fft_16x16_wg16(t1_r, t1_c, t1_r, t1_c, lid);
      
-    for(int i=0; i<(4*16); i++){
-        y_r[i] = t1_r[i];
-        y_c[i] = t1_c[i];
+    for(j=0; j<4; j++){
+        y_r[i+j] = t1_r[i+j];
+        y_c[i+j] = t1_c[i+j];
     }
 }
 
 __kernel void ifft_16x16_inplace_test(__global float4 *x_r,
                                       __global float4 *x_c, 
                                       __global float4 *y_r,
-                                      __global float4 *y_c) {
-    float4 t1_r[4*16];
-    float4 t1_c[4*16];
+                                      __global float4 *y_c) 
+{
+    int lid = get_local_id(0);
+    int i = lid*4;
+    int j;
+
+    __local float4 t1_r[PSIZE];
+    __local float4 t1_c[PSIZE];
     
-    for(int i=0; i<(4*16); i++){
-        t1_r[i] = x_r[i];
-        t1_c[i] = x_c[i];
+    for(j=0; j<4; j++){
+        t1_r[i+j] = x_r[i+j];
+        t1_c[i+j] = x_c[i+j];
     }
     
-    ifft_16x16(t1_r, t1_c, t1_r, t1_c);
+    ifft_16x16_wg16(t1_r, t1_c, t1_r, t1_c, lid);
      
-    for(int i=0; i<(4*16); i++){
-        y_r[i] = t1_r[i];
-        y_c[i] = t1_c[i];
+    for(j=0; j<4; j++){
+        y_r[i+j] = t1_r[i+j];
+        y_c[i+j] = t1_c[i+j];
     }
 }
 """
@@ -224,7 +250,7 @@ except:
    raise
 
 
-def npts_fft(kernel, py_fft, n_pts):
+def npts_fft(kernel, py_fft, n_pts, g_size = (1,), l_size = (1,)):
    x_r = numpy.random.uniform(size = n_pts).astype(dtype = numpy.float32)
    x_c = numpy.random.uniform(size = n_pts).astype(dtype = numpy.float32)
 
@@ -237,7 +263,7 @@ def npts_fft(kernel, py_fft, n_pts):
    y_r_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = y_r)
    y_c_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = y_c)
     
-   kernel(queue, (1,), (1,), x_r_buffer, x_c_buffer, y_r_buffer, y_c_buffer)
+   kernel(queue, g_size, l_size, x_r_buffer, x_c_buffer, y_r_buffer, y_c_buffer)
    cl.enqueue_copy(queue, y_r, y_r_buffer).wait()
    cl.enqueue_copy(queue, y_c, y_c_buffer).wait()
    queue.finish()
@@ -258,10 +284,10 @@ def test_fft_16():
    npts_fft(program.fft16_test, numpy.fft.fft, 16)
 
 def test_fft_16x16():
-   npts_fft(program.fft_16x16_test, numpy.fft.fft2, (16,16))
+   npts_fft(program.fft_16x16_test, numpy.fft.fft2, (16,16), g_size = (16,), l_size = (16,))
 
 def test_fft_16x16_inplace():
-   npts_fft(program.fft_16x16_inplace_test, numpy.fft.fft2, (16,16))
+   npts_fft(program.fft_16x16_inplace_test, numpy.fft.fft2, (16,16), g_size = (16,), l_size = (16,))
 
 def test_ifft_4():
    npts_fft(program.ifft4_test, numpy.fft.ifft, 4)
@@ -273,10 +299,10 @@ def test_ifft_16():
    npts_fft(program.ifft16_test, numpy.fft.ifft, 16)
 
 def test_ifft_16x16():
-   npts_fft(program.ifft_16x16_test, numpy.fft.ifft2, (16,16))
+   npts_fft(program.ifft_16x16_test, numpy.fft.ifft2, (16,16), g_size = (16,), l_size = (16,))
 
 def test_ifft_16x16_inplace():
-   npts_fft(program.ifft_16x16_inplace_test, numpy.fft.ifft2, (16,16))
+   npts_fft(program.ifft_16x16_inplace_test, numpy.fft.ifft2, (16,16), g_size = (16,), l_size = (16,))
 
 def test_py_ref_fft_16x16(): 
    x_r = numpy.random.uniform(size = 256).astype(dtype = numpy.float32)
@@ -294,7 +320,7 @@ def test_py_ref_fft_16x16():
    y_r_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = y_r)
    y_c_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = y_c)
     
-   program.fft_16x16_test(queue, (1,), (1,), x_r_buffer, x_c_buffer, y_r_buffer, y_c_buffer)
+   program.fft_16x16_test(queue, (16,), (16,), x_r_buffer, x_c_buffer, y_r_buffer, y_c_buffer)
    cl.enqueue_copy(queue, y_r, y_r_buffer).wait()
    cl.enqueue_copy(queue, y_c, y_c_buffer).wait()
    queue.finish()

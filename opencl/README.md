@@ -7,9 +7,10 @@ An OpenCL GPU kernel for NCS.
 Tests were done using the `NCS/opencl/pyOpenCLNCS/profile.py` Python script.
 Speedup is relative to the clib version of NCS on the same computer.
 
-* Nvidia Tesla K20Xm - 5x speedup.
-* Intel Haswell-ULT Integrated Graphics Controller - 4.2x speedup.
-* Nvidia GeForce GT 1030 - 1.2x speedup.
+* Nvidia Tesla K20Xm - 25x speedup.
+* Intel Haswell-ULT Integrated Graphics Controller - 4.5x speedup.
+* Nvidia GeForce GT 1030 - 20x speedup.
+* Nvidia GeForce GTX 750 Ti - 26x speedup.
 
 ## Example Usage ##
 

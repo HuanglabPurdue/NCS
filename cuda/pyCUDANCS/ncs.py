@@ -1,42 +1,30 @@
 #
-# Python wrapper for the OpenCL NCS kernel.
+# Python wrapper for the CUDA NCS kernel.
 #
 # Hazen 08/19
 #
 import numpy
-import pyopencl as cl
+import pycuda.autoinit
+import pycuda.driver as drv
+from pycuda.compiler import SourceModule
 import warnings
+import time
 
-import pyOpenCLNCS
+import pyCUDANCS
 
 #
-# OpenCL setup.
+# CUDA setup.
 #
-kernel_code = pyOpenCLNCS.loadNCSKernel()
-
-# Create context and command queue
-platform = cl.get_platforms()[0]
-devices = platform.get_devices()
-context = cl.Context(devices)
-queue = cl.CommandQueue(context,
-                        properties=cl.command_queue_properties.PROFILING_ENABLE)
-
-# Open program file and build
-program = cl.Program(context, kernel_code)
-try:
-   program.build()
-except:
-   print("Build log:")
-   print(program.get_build_info(devices[0],
-         cl.program_build_info.LOG))
-   raise
+kernel_code = pyCUDANCS.loadNCSKernel()
+mod = SourceModule(kernel_code, **pyCUDANCS.src_module_args)
+ncsReduceNoise = mod.get_function("ncsReduceNoise")
 
 
-class NCSOpenCLException(Exception):
+class NCSCUDAException(Exception):
    pass
 
 
-class NCSOpenCL(object):
+class NCSCUDA(object):
 
    def __init__(self, strict = True, **kwds):
       super().__init__(**kwds)
@@ -89,7 +77,7 @@ class NCSOpenCL(object):
       counter = 0
       for h in range(len(images)):
          if (images[h].shape[0] != im0_shape[0]) or (images[h].shape[1] != im0_shape[1]):
-            raise NCSOpenCLException("All images must be the same size!")
+            raise NCSCUDAException("All images must be the same size!")
             
          pad_image = numpy.pad(images[h], 1, 'edge')
          for i in range(0, pad_image.shape[0], s_size):
@@ -121,36 +109,23 @@ class NCSOpenCL(object):
       assert (data_in.dtype == numpy.float32)
       assert (gamma.dtype == numpy.float32)
             
-      # Run OpenCL noise reduction kernel on the sub-regions.
-      data_in_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, 
-                                 hostbuf = data_in)
-      gamma_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, 
-                               hostbuf = gamma)
-      otf_mask_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, 
-                                  hostbuf = self.otf_mask)
-      data_out_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, 
-                                  hostbuf = data_out)
-      iters_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, 
-                               hostbuf = iters)
-      status_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, 
-                                hostbuf = status)
-
-      ev1 = program.ncsReduceNoise(queue, (num_sr*16,), (16,),
-                                   data_in_buffer,
-                                   gamma_buffer,
-                                   otf_mask_buffer,
-                                   data_out_buffer,
-                                   iters_buffer,
-                                   status_buffer,
-                                   numpy.float32(alpha))
-
-      cl.enqueue_copy(queue, data_out, data_out_buffer).wait()
-      cl.enqueue_copy(queue, iters, iters_buffer).wait()
-      cl.enqueue_copy(queue, status, status_buffer).wait()
-      queue.finish()
+      # Run NCS noise reduction kernel on the sub-regions.
+      #
+      # FIXME: We could probably do a better job measuring the elapsed time.
+      #
+      start_time = time.time()
+      ncsReduceNoise(drv.In(data_in),
+                     drv.In(gamma),
+                     drv.In(self.otf_mask),
+                     drv.Out(data_out),
+                     drv.Out(iters),
+                     drv.Out(status),
+                     numpy.float32(alpha),
+                     block = (16,1,1),
+                     grid = (num_sr,1))
+      e_time = time.time() - start_time
       
       if verbose:
-         e_time = 1.0e-9*(ev1.profile.end - ev1.profile.start)
          print("Processed {0:d} sub-regions in {1:.6f} seconds.".format(num_sr, e_time))
 
       # Check status.
@@ -211,13 +186,13 @@ class NCSOpenCL(object):
       if self.strict:
 
          if (otf_mask.shape[0] != otf_mask.shape[1]):
-            raise NCSOpenCLException("OTF must be square!")
+            raise NCSCUDAException("OTF must be square!")
          
          if (otf_mask.size != self.size*self.size):
-            raise NCSOpenCLException("OTF size must match sub-region size!")
+            raise NCSCUDAException("OTF size must match sub-region size!")
 
          if not checkOTFMask(otf_mask):
-            raise NCSOpenCLException("OTF does not have the expected symmetry!")        
+            raise NCSCUDAException("OTF does not have the expected symmetry!")        
 
       self.otf_mask = numpy.fft.fftshift(otf_mask).astype(numpy.float32)
         
@@ -245,7 +220,7 @@ def reduceNoise(images, gamma, otf_mask, alpha, strict = True, verbose = False):
    otf_mask - 16 x 16 array containing the OTF mask.
    alpha - NCS alpha term.
    """
-   ncs = NCSOpenCL()
+   ncs = NCSCUDA()
    ncs.setOTFMask(otf_mask)
    ncs.setGamma(gamma)
    return ncs.reduceNoise(images, alpha, verbose = verbose)

@@ -15,22 +15,23 @@ __kernel void converged_test(__global float4 *g_v1,
                              __global float4 *g_v2,
                              __global int *g_conv)
 {
-    float4 v1[PSIZE];
-    float4 v2[PSIZE];
-    
-    for(int i=0; i<PSIZE; i++){
-        v1[i] = g_v1[i];
-        v2[i] = g_v2[i];
-    }
-    
-    *g_conv = converged(v1, v2);
-}
+    int lid = get_local_id(0);
+    int i = lid*4;
 
-__kernel void moduloM_test(__global int *g_i,
-                           __global int *g_j)
-{
-    int i = g_i[0];
-    *g_j = moduloM(i);
+    __local int w1[1];
+    __local float w2[ASIZE];
+    __local float4 v1[PSIZE];
+    __local float4 v2[PSIZE];
+    
+    for (int j=0; j<4; j++){
+        v1[i+j] = g_v1[i+j];
+        v2[i+j] = g_v2[i+j];
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    converged(w1, w2, v1, v2, lid);
+    *g_conv = w1[0];
 }
 
 """
@@ -70,7 +71,7 @@ def test_converged_1():
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
    v3_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v3)
    
-   program.converged_test(queue, (1,), (1,), v1_buffer, v2_buffer, v3_buffer)
+   program.converged_test(queue, (16,), (16,), v1_buffer, v2_buffer, v3_buffer)
    cl.enqueue_copy(queue, v3, v3_buffer).wait()
    queue.finish()
    
@@ -86,7 +87,7 @@ def test_converged_2():
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
    v3_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v3)
    
-   program.converged_test(queue, (1,), (1,), v1_buffer, v2_buffer, v3_buffer)
+   program.converged_test(queue, (16,), (16,), v1_buffer, v2_buffer, v3_buffer)
    cl.enqueue_copy(queue, v3, v3_buffer).wait()
    queue.finish()
 
@@ -102,39 +103,12 @@ def test_converged_3():
    v2_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
    v3_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v3)
    
-   program.converged_test(queue, (1,), (1,), v1_buffer, v2_buffer, v3_buffer)
+   program.converged_test(queue, (16,), (16,), v1_buffer, v2_buffer, v3_buffer)
    cl.enqueue_copy(queue, v3, v3_buffer).wait()
    queue.finish()
    
    assert (v3[0] == 1)
 
-def _test_moduloM():
-   #
-   # Not used. I'd read that module on a GPU was very slow and should be
-   # avoided so I tried replacing it with a bitwise AND. This however
-   # had no effect on the processing time so I went back to modulo as it
-   # is more flexible.
-   #
-   
-   # Figure out value of M in kernel_code
-   for elt in kernel_code.splitlines():
-      if elt.startswith('#define M '):
-          m_val = int(elt.split(" ")[2])
-          assert ((m_val > 0) and ((m_val & (m_val - 1)) == 0)), str(m_val) + " is not a power of 2!"
-   
-   for i in range(20):
-      v1 = numpy.array([i]).astype(numpy.int)
-      v2 = numpy.zeros(1, dtype = numpy.int)
-
-      v1_buffer = cl.Buffer(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v1)
-      v2_buffer = cl.Buffer(context, cl.mem_flags.WRITE_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf = v2)
-   
-      program.moduloM_test(queue, (1,), (1,), v1_buffer, v2_buffer)
-      cl.enqueue_copy(queue, v2, v2_buffer).wait()
-      queue.finish()
-   
-      assert (v2[0] == (i % 8))
-      
 if (__name__ == "__main__"):
-   test_moduloM()
+   test_converged_1()
    

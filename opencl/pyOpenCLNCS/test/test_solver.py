@@ -67,7 +67,7 @@ def test_ncs_noise_reduction_1():
                              hostbuf = status)
 
    # OpenCL noise reduction.
-   program.ncsReduceNoise(queue, (1,), (1,),
+   program.ncsReduceNoise(queue, (16,), (16,),
                           data_buffer,
                           gamma_buffer,
                           otf_mask_buffer,
@@ -130,7 +130,7 @@ def test_ncs_noise_reduction_2():
                              hostbuf = status)
 
    # OpenCL noise reduction.
-   program.ncsReduceNoise(queue, (n_reps,), (1,),
+   program.ncsReduceNoise(queue, (n_reps*16,), (16,),
                           data_buffer,
                           gamma_buffer,
                           otf_mask_buffer,
@@ -160,7 +160,7 @@ def test_ncs_noise_reduction_2():
 
    for i in range(n_reps):
       norm_diff = numpy.max(numpy.abs(u[i,:,:] - ref_u[i,:,:]))/numpy.max(ref_u[i,:,:])
-      assert(norm_diff < 1.0e-2), str(norm_diff)
+      assert(norm_diff < 1.0e-2), "failed {0:d} {1:.3f}".format(i, norm_diff)
       
 
 if (__name__ == "__main__"):
